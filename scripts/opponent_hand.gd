@@ -6,11 +6,6 @@ var card_scene = preload(CARD_SCENE_PATH)
 var card_manager_ref
 var battle_manager_ref
 
-const CARD_WIDTH = 120
-const HAND_Y_POSITION = 30 # NOVO: Posição Y para a mão do oponente (acima dos slots)
-
-const DEFAULT_CARD_MOVE_SPEED = 0.1
-
 var center_screen_x: float
 var opponent_hand: Array[Node2D] = [] # NOVO: Array para as cartas do oponente
 

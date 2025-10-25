@@ -28,14 +28,6 @@ const HEAVY_ATTACK_VFX = preload("res://scenes/vfx/heavy_attack_vfx.tscn")
 
 var card_database_ref = preload("res://scripts/card_database.gd")
 
-const OPPONENT_CARD_MOVE_SPEED = 0.2
-const OPPONENT_STARTING_HAND_SIZE = 5
-const OPPONENT_TURN_TIME = 1
-
-# --- Constantes de Jogo ---
-const BATTLE_POS_OFFSET_Y = 25
-
-# --- Variáveis de Estado ---
 var player_health: int = 20
 var opponent_health: int = 20
 var player_max_energy: int = 1
@@ -268,7 +260,7 @@ func direct_attack(attacking_card: Node2D, attacker: String):
 func attack(attacking_card: Node2D, defending_card: Node2D, attacker: String):
 	player_is_attacking = true; end_turn_button.disabled = true; end_turn_button.visible = false
 	attacking_card.z_index = 5
-	var target_pos = defending_card.global_position + Vector2(0, BATTLE_POS_OFFSET_Y)
+	var target_pos = defending_card.global_position + Vector2(0, Constants.BATTLE_POS_OFFSET_Y)
 	animate_card_to_position_and_scale(attacking_card, target_pos, attacking_card.scale, 0.15); await wait_seconds(0.15)
 	var vfx_scene = null
 	if attacking_card.attack >= 5:

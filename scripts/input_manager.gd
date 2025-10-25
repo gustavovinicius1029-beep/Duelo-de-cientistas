@@ -8,11 +8,6 @@ signal empty_space_clicked
 signal left_mouse_button_clicked()
 signal left_mouse_button_released()
 
-const COLLISION_MASK_CARD = 1           # Layer 1
-const COLLISION_MASK_CARD_SLOT = 2      # Layer 2
-const COLLISION_MASK_DECK = 4           # Layer 3
-const COLLISION_MASK_OPPONENT_CARD = 8  # Layer 4
-
 var card_manager_ref
 var deck_ref
 var battle_manager_ref
@@ -44,7 +39,7 @@ func raycast_at_cursor():
 	var query = PhysicsPointQueryParameters2D.new()
 	query.position = get_global_mouse_position()
 	query.collide_with_areas = true
-	query.collision_mask = COLLISION_MASK_CARD | COLLISION_MASK_CARD_SLOT | COLLISION_MASK_DECK | COLLISION_MASK_OPPONENT_CARD #
+	query.collision_mask = Constants.MASK_INPUT_CLICK
 
 	var result = space_state.intersect_point(query)
 
@@ -56,21 +51,21 @@ func raycast_at_cursor():
 		print("InputManager: Colisão detectada! Objeto: ", collider_parent.name, " | Camada (Máscara): ", result_collision_layer_mask) #
 
 		# Verifica Camada da Carta do Oponente (Máscara 8)
-		if result_collision_layer_mask == COLLISION_MASK_OPPONENT_CARD: #
+		if result_collision_layer_mask == Constants.COLLISION_MASK_OPPONENT_CARD: #
 			if is_instance_valid(collider_parent):
 				print("InputManager: Clicou em CARTA DO OPONENTE.") #
 				# REMOVER: battle_manager_ref.opponent_card_selected(collider_parent)
 				emit_signal("opponent_card_clicked", collider_parent) # EMITIR SINAL
 
 		# Verifica Camada da Carta do Jogador (Máscara 1)
-		elif result_collision_layer_mask == COLLISION_MASK_CARD: #
+		elif result_collision_layer_mask == Constants.COLLISION_MASK_CARD: #
 			if is_instance_valid(collider_parent):
 				print("InputManager: Clicou em CARTA DO JOGADOR.") #
 				# REMOVER: card_manager_ref.card_clicked(collider_parent)
 				emit_signal("player_card_clicked", collider_parent) # EMITIR SINAL
 
 		# Verifica Camada do Deck do Jogador (Máscara 4)
-		elif result_collision_layer_mask == COLLISION_MASK_DECK: #
+		elif result_collision_layer_mask == Constants.COLLISION_MASK_DECK: #
 			if collider_parent == deck_ref: #
 				print("InputManager: Clicou no DECK do Jogador.") #
 				emit_signal("player_deck_clicked") # EMITIR SINAL

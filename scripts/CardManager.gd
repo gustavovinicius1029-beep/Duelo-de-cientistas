@@ -7,10 +7,6 @@ signal card_deselected_for_attack(card: Node2D)
 signal card_drag_started(card: Node2D)
 signal card_drag_finished(card: Node2D, target_slot: Node2D) 
 
-const COLLISION_MASK_CARD = 1
-const COLLISION_MASK_CARD_SLOT = 2
-const COLLISION_MASK_DECK = 4
-
 var screen_size: Vector2
 var card_being_dragged: Node2D = null
 var card_being_hovered: Node2D = null
@@ -22,11 +18,6 @@ var deck_ref
 var battle_manager_ref
 
 # --- Constantes (sem mudança) ---
-const DEFAULT_CARD_MOVE_SPEED = 0.1
-const DEFAULT_CARD_SCALE = Vector2(0.6, 0.6)
-const CARD_BIGGER_SCALE = Vector2(0.75, 0.75)
-const CARD_SMALLER_SCALE = Vector2(0.6, 0.6)
-
 var selected_monster: Node2D = null
 
 func _ready():
@@ -78,7 +69,7 @@ func finish_drag():
 	if card_being_dragged:
 		# 1. Verifica Limite de Terreno
 		if card_being_dragged.card_type == "Terreno" and battle_manager_ref.player_played_land_this_turn:
-			player_hand_ref.add_card_to_hand(card_being_dragged, DEFAULT_CARD_MOVE_SPEED)
+			player_hand_ref.add_card_to_hand(card_being_dragged, Constants.DEFAULT_CARD_MOVE_SPEED)
 			# Sinal de fim ANTES de resetar
 			emit_signal("card_drag_finished", original_card, null)
 			card_being_dragged = null
@@ -87,7 +78,7 @@ func finish_drag():
 		# 2. Verifica Custo de Energia (Criaturas/Feitiços)
 		if card_being_dragged.card_type != "Terreno":
 			if card_being_dragged.energy_cost > battle_manager_ref.player_current_energy:
-				player_hand_ref.add_card_to_hand(card_being_dragged, DEFAULT_CARD_MOVE_SPEED)
+				player_hand_ref.add_card_to_hand(card_being_dragged, Constants.DEFAULT_CARD_MOVE_SPEED)
 				# Sinal de fim ANTES de resetar
 				emit_signal("card_drag_finished", original_card, null)
 				card_being_dragged = null
@@ -102,7 +93,7 @@ func finish_drag():
 					can_cast = false
 
 			if not can_cast:
-				battle_manager_ref.animate_card_to_position_and_scale(card_being_dragged, card_being_dragged.hand_position, DEFAULT_CARD_SCALE, DEFAULT_CARD_MOVE_SPEED)
+				battle_manager_ref.animate_card_to_position_and_scale(card_being_dragged, card_being_dragged.hand_position, Constants.DEFAULT_CARD_SCALE, Constants.DEFAULT_CARD_MOVE_SPEED)
 				# Sinal de fim ANTES de resetar
 				emit_signal("card_drag_finished", original_card, null)
 				card_being_dragged = null
@@ -111,7 +102,7 @@ func finish_drag():
 			# Se pode lançar o feitiço
 			battle_manager_ref.player_current_energy -= card_being_dragged.energy_cost
 			battle_manager_ref.update_energy_labels()
-			player_hand_ref.remove_card_from_hand(card_being_dragged, DEFAULT_CARD_MOVE_SPEED)
+			player_hand_ref.remove_card_from_hand(card_being_dragged, Constants.DEFAULT_CARD_MOVE_SPEED)
 			card_being_dragged.visible = false # Esconde carta temporariamente
 
 			emit_signal("spell_cast_initiated", original_card) # Sinaliza que um feitiço começou
@@ -128,7 +119,7 @@ func finish_drag():
 		if card_slot_found and not card_slot_found.card_in_slot and card_being_dragged.card_type == card_slot_found.card_slot_type:
 			# Posiciona e dimensiona
 			card_being_dragged.global_position = card_slot_found.global_position
-			card_being_dragged.scale = CARD_SMALLER_SCALE
+			card_being_dragged.scale = Constants.CARD_SMALLER_SCALE
 			card_being_dragged.z_index = -1
 
 			# Reabilita colisão da carta
@@ -148,7 +139,7 @@ func finish_drag():
 			card_being_dragged.card_slot_card_is_in = card_slot_found
 
 			# Remove da mão visualmente
-			player_hand_ref.remove_card_from_hand(card_being_dragged, DEFAULT_CARD_MOVE_SPEED)
+			player_hand_ref.remove_card_from_hand(card_being_dragged, Constants.DEFAULT_CARD_MOVE_SPEED)
 
 			# Emite sinal indicando que a carta foi jogada com sucesso
 			emit_signal("card_played", original_card)
@@ -158,7 +149,7 @@ func finish_drag():
 				battle_manager_ref.player_played_land_this_turn = true
 		else:
 			# Slot inválido ou ocupado, retorna para a mão
-			player_hand_ref.add_card_to_hand(card_being_dragged, DEFAULT_CARD_MOVE_SPEED)
+			player_hand_ref.add_card_to_hand(card_being_dragged, Constants.DEFAULT_CARD_MOVE_SPEED)
 
 	# Emite o sinal de fim de drag (independente de sucesso ou falha ao jogar no slot)
 	if is_instance_valid(original_card):
@@ -194,10 +185,10 @@ func highlight_card(card: Node2D, hovered: bool):
 	if card.card_slot_card_is_in != null and hovered: return
 		
 	if hovered:
-		card.scale = CARD_BIGGER_SCALE
+		card.scale = Constants.CARD_BIGGER_SCALE
 		card.z_index = 2
 	else:
-		card.scale = DEFAULT_CARD_SCALE
+		card.scale = Constants.DEFAULT_CARD_SCALE
 		card.z_index = 1
 
 # Reseta apenas a seleção visual
@@ -255,7 +246,7 @@ func raycast_check_for_card() -> Node2D:
 	var query = PhysicsPointQueryParameters2D.new()
 	query.position = get_global_mouse_position()
 	query.collide_with_areas = true
-	query.collision_mask = COLLISION_MASK_CARD
+	query.collision_mask = Constants.COLLISION_LAYER_CARD | Constants.COLLISION_LAYER_SLOT | Constants.COLLISION_LAYER_DECK | Constants.COLLISION_LAYER_OPPONENT_CARD
 	var result = space.intersect_point(query)
 	if !result.is_empty():
 		return get_card_with_highest_z_index(result)
@@ -267,7 +258,7 @@ func raycast_check_for_card_slot() -> Node2D:
 	var query = PhysicsPointQueryParameters2D.new()
 	query.position = get_global_mouse_position()
 	query.collide_with_areas = true
-	query.collision_mask = COLLISION_MASK_CARD_SLOT
+	query.collision_mask = Constants.COLLISION_MASK_CARD_SLOT
 	var result = space.intersect_point(query)
 	if !result.is_empty(): 
 		var c = result[0].collider

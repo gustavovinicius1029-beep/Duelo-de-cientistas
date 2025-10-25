@@ -3,9 +3,6 @@ extends Node2D
 var card_manager_ref
 var battle_manager_ref
 var cards_in_hand: Array = []
-const CARD_WIDTH = 120
-const HAND_Y_POSITION = 930 # Posição Y para a mão do oponente
-const DEFAULT_CARD_MOVE_SPEED = 0.1
 
 var center_screen_x: float
 
