@@ -81,6 +81,7 @@ func raycast_at_cursor():
 					var opponent_bm_node = get_node_or_null(opponent_bm_path)
 					if is_instance_valid(opponent_bm_node):
 						opponent_bm_node.rpc_id(opponent_peer_id, "rpc_draw_opponent_card")
+					deck_ref.drawn_card_this_turn = true
 			else:
 				print("InputManager: Colisão na camada DECK, mas não era o deck do jogador (era ", collider_parent.name, ")")
 		

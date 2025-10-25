@@ -1,0 +1,142 @@
+[gd_scene load_steps=8 format=3 uid="uid://d057x6lxl0ltn"]
+
+[ext_resource type="Script" uid="uid://bfun1cur26iea" path="res://scripts/battle_manager.gd" id="1_qprj8"]
+[ext_resource type="Script" uid="uid://cnvlvgjxb54ua" path="res://scripts/opponent_deck.gd" id="1_wj220"]
+[ext_resource type="Texture2D" uid="uid://cab0fe5vwt5yr" path="res://assets/CartaFundo2.png" id="2_s3t45"]
+[ext_resource type="PackedScene" uid="uid://drerm5jex1ovf" path="res://scenes/opponent_card_slot.tscn" id="3_6b2sf"]
+[ext_resource type="Script" uid="uid://hy8wrlqh3eee" path="res://scripts/opponent_hand.gd" id="4_ov86f"]
+[ext_resource type="Texture2D" uid="uid://df88e3235ytw0" path="res://assets/CardSlot.png" id="5_2cm6m"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_v32qa"]
+size = Vector2(143.33325, 206.66667)
+
+[node name="OpponentField" type="Node2D"]
+
+[node name="BattleManager" type="Node" parent="."]
+script = ExtResource("1_qprj8")
+
+[node name="Deck" type="Node2D" parent="."]
+position = Vector2(1770, 150)
+scale = Vector2(0.6, 0.6)
+script = ExtResource("1_wj220")
+
+[node name="DeckImage" type="Sprite2D" parent="Deck"]
+z_index = -2
+position = Vector2(-0.375, 0.49999988)
+scale = Vector2(0.17042825, 0.17483108)
+texture = ExtResource("2_s3t45")
+
+[node name="CardCountLabel" type="RichTextLabel" parent="Deck"]
+modulate = Color(0, 0, 0, 1)
+z_index = -2
+offset_left = -29.375
+offset_top = -34.5
+offset_right = -9.375
+offset_bottom = -11.0
+scale = Vector2(3, 3)
+text = "0"
+horizontal_alignment = 1
+vertical_alignment = 1
+metadata/_edit_use_anchors_ = true
+
+[node name="Area2D" type="Area2D" parent="Deck"]
+collision_layer = 4
+collision_mask = 4
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Deck/Area2D"]
+position = Vector2(0, 1.6666565)
+shape = SubResource("RectangleShape2D_v32qa")
+
+[node name="OpponentCardSlots" type="Node2D" parent="." groups=["opponent_slots_container"]]
+z_index = -3
+position = Vector2(0, -450)
+
+[node name="OpponentCardSlots" parent="OpponentCardSlots" instance=ExtResource("3_6b2sf")]
+position = Vector2(500, 800)
+
+[node name="OpponentCardSlots2" parent="OpponentCardSlots" instance=ExtResource("3_6b2sf")]
+position = Vector2(615, 800)
+
+[node name="OpponentCardSlots3" parent="OpponentCardSlots" instance=ExtResource("3_6b2sf")]
+position = Vector2(730, 800)
+
+[node name="OpponentCardSlots4" parent="OpponentCardSlots" instance=ExtResource("3_6b2sf")]
+position = Vector2(845, 800)
+
+[node name="OpponentCardSlots5" parent="OpponentCardSlots" instance=ExtResource("3_6b2sf")]
+position = Vector2(960, 800)
+
+[node name="OpponentCardSlots6" parent="OpponentCardSlots" instance=ExtResource("3_6b2sf")]
+position = Vector2(1075, 800)
+
+[node name="OpponentCardSlots7" parent="OpponentCardSlots" instance=ExtResource("3_6b2sf")]
+position = Vector2(1190, 800)
+
+[node name="OpponentCardSlots8" parent="OpponentCardSlots" instance=ExtResource("3_6b2sf")]
+position = Vector2(1305, 800)
+
+[node name="OpponentCardSlots9" parent="OpponentCardSlots" instance=ExtResource("3_6b2sf")]
+position = Vector2(1419, 800)
+
+[node name="OpponentCardSlots10" parent="OpponentCardSlots" instance=ExtResource("3_6b2sf")]
+position = Vector2(500, 650)
+card_slot_type = "Terreno"
+
+[node name="OpponentCardSlots11" parent="OpponentCardSlots" instance=ExtResource("3_6b2sf")]
+position = Vector2(615, 650)
+card_slot_type = "Terreno"
+
+[node name="OpponentCardSlots12" parent="OpponentCardSlots" instance=ExtResource("3_6b2sf")]
+position = Vector2(730, 650)
+card_slot_type = "Terreno"
+
+[node name="OpponentCardSlots13" parent="OpponentCardSlots" instance=ExtResource("3_6b2sf")]
+position = Vector2(845, 650)
+card_slot_type = "Terreno"
+
+[node name="OpponentCardSlots14" parent="OpponentCardSlots" instance=ExtResource("3_6b2sf")]
+position = Vector2(960, 650)
+card_slot_type = "Terreno"
+
+[node name="OpponentCardSlots15" parent="OpponentCardSlots" instance=ExtResource("3_6b2sf")]
+position = Vector2(1075, 650)
+card_slot_type = "Terreno"
+
+[node name="OpponentCardSlots16" parent="OpponentCardSlots" instance=ExtResource("3_6b2sf")]
+position = Vector2(1190, 650)
+card_slot_type = "Terreno"
+
+[node name="OpponentCardSlots17" parent="OpponentCardSlots" instance=ExtResource("3_6b2sf")]
+position = Vector2(1305, 650)
+card_slot_type = "Terreno"
+
+[node name="OpponentCardSlots18" parent="OpponentCardSlots" instance=ExtResource("3_6b2sf")]
+position = Vector2(1419, 650)
+card_slot_type = "Terreno"
+
+[node name="OpponentHand" type="Node2D" parent="."]
+script = ExtResource("4_ov86f")
+
+[node name="OpponentHealthLabel" type="RichTextLabel" parent="."]
+offset_left = 1600.0
+offset_top = 263.0
+offset_right = 1640.0
+offset_bottom = 303.0
+scale = Vector2(2, 2)
+text = "0"
+
+[node name="OpponentEnergyLabel" type="RichTextLabel" parent="."]
+offset_left = 1645.0
+offset_top = 263.0
+offset_right = 1728.0
+offset_bottom = 303.0
+scale = Vector2(2, 2)
+text = "0"
+
+[node name="OpponentDiscard" type="Node2D" parent="."]
+position = Vector2(360, 475)
+scale = Vector2(0.6, 0.6)
+
+[node name="PlayerDiscardImage" type="Sprite2D" parent="OpponentDiscard"]
+scale = Vector2(0.8240725, 0.78057265)
+texture = ExtResource("5_2cm6m")

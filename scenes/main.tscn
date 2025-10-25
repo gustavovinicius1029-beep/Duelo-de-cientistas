@@ -1,0 +1,45 @@
+[gd_scene load_steps=2 format=3 uid="uid://drrpriok1n2aw"]
+
+[ext_resource type="Script" uid="uid://crm8012tc0rpc" path="res://scripts/multiplayer.gd" id="1_o5qli"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_o5qli")
+
+[node name="IPAddressLineEdit" type="LineEdit" parent="."]
+offset_left = 513.0
+offset_top = 640.0
+offset_right = 1413.0
+offset_bottom = 715.0
+theme_override_font_sizes/font_size = 30
+placeholder_text = "Digite o IP do Host"
+alignment = 1
+
+[node name="HostButton" type="Button" parent="."]
+offset_left = 1110.0
+offset_top = 450.0
+offset_right = 1410.0
+offset_bottom = 565.0
+theme_override_font_sizes/font_size = 40
+text = "Host (Servidor)"
+
+[node name="JoinButton" type="Button" parent="."]
+offset_left = 510.0
+offset_top = 450.0
+offset_right = 810.0
+offset_bottom = 565.0
+theme_override_font_sizes/font_size = 40
+text = "Join (Cliente)"
+icon_alignment = 1
+
+[node name="HostIPLabel" type="RichTextLabel" parent="."]
+visible = false
+z_index = -5
+offset_left = 516.0
+offset_top = 642.0
+offset_right = 1416.0
+offset_bottom = 717.0
+focus_mode = 2
+theme_override_font_sizes/normal_font_size = 40
+horizontal_alignment = 1
+vertical_alignment = 1
+selection_enabled = true

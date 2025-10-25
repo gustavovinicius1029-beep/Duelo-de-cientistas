@@ -1,0 +1,17 @@
+[gd_scene load_steps=3 format=3 uid="uid://bagw0i3f308ff"]
+
+[ext_resource type="Texture2D" uid="uid://bni47iamwwwse" path="res://assets/VFX/Effect_BigHit_1_516x528.png" id="1_iwr12"]
+[ext_resource type="Script" uid="uid://dikqdhwgyaa1u" path="res://scripts/vfx/vfx_animator.gd" id="2_kj08b"]
+
+[node name="Node2D" type="Node2D"]
+
+[node name="HeavyAttackVFX" type="Sprite2D" parent="."]
+z_index = 5
+scale = Vector2(2, 2)
+texture = ExtResource("1_iwr12")
+hframes = 9
+vframes = 7
+frame = 18
+script = ExtResource("2_kj08b")
+total_frames = 23
+frame_duration = 0.015

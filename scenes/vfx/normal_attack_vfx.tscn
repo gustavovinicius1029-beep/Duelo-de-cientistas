@@ -1,0 +1,17 @@
+[gd_scene load_steps=3 format=3 uid="uid://dbm17mfiwvjgf"]
+
+[ext_resource type="Texture2D" uid="uid://b8dajy2e0ich5" path="res://assets/VFX/Effect_SmallHit_1_516x463.png" id="1_dd5ho"]
+[ext_resource type="Script" uid="uid://dikqdhwgyaa1u" path="res://scripts/vfx/vfx_animator.gd" id="2_udf2p"]
+
+[node name="Node2D" type="Node2D"]
+
+[node name="NormalAttackVFX" type="Sprite2D" parent="."]
+z_index = 5
+scale = Vector2(2, 2)
+texture = ExtResource("1_dd5ho")
+hframes = 9
+vframes = 7
+frame = 1
+script = ExtResource("2_udf2p")
+total_frames = 29
+frame_duration = 0.015

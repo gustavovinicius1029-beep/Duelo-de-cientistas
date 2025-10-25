@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3 uid="uid://46n5yq3g4m4k"]
+
+[ext_resource type="Texture2D" uid="uid://di4dacp4uhr7c" path="res://assets/VFX/Effect_TheVortex_1_429x429.png" id="1_fa5so"]
+[ext_resource type="Script" uid="uid://dhr45rqp6gm0o" path="res://summon_vfx.gd" id="2_wy38t"]
+
+[node name="Node2D" type="Node2D"]
+z_index = 5
+scale = Vector2(0.75, 0.75)
+
+[node name="SummonVFX" type="Sprite2D" parent="."]
+scale = Vector2(2, 2)
+texture = ExtResource("1_fa5so")
+hframes = 9
+vframes = 7
+script = ExtResource("2_wy38t")

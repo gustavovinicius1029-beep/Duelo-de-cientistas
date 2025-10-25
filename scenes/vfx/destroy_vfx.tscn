@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3 uid="uid://bcyhufsce7r2w"]
+
+[ext_resource type="Texture2D" uid="uid://bgsun624jqxtn" path="res://assets/VFX/Effect_BloodImpact_1_60x63.png" id="1_gwj1l"]
+[ext_resource type="Script" uid="uid://dikqdhwgyaa1u" path="res://scripts/vfx/vfx_animator.gd" id="2_6ft3w"]
+
+[node name="Node2D" type="Node2D"]
+
+[node name="DestroyVFX" type="Sprite2D" parent="."]
+z_index = 5
+scale = Vector2(2.5, 2.5)
+texture = ExtResource("1_gwj1l")
+hframes = 9
+vframes = 7
+script = ExtResource("2_6ft3w")
+total_frames = 48

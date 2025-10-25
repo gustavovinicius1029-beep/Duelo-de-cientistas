@@ -1,0 +1,13 @@
+[gd_scene load_steps=3 format=3 uid="uid://drerm5jex1ovf"]
+
+[ext_resource type="Script" uid="uid://cb0oqbrva5a1r" path="res://scripts/opponent_card_slot.gd" id="1_xclqi"]
+[ext_resource type="Texture2D" uid="uid://df88e3235ytw0" path="res://assets/CardSlot.png" id="2_jg36a"]
+
+[node name="CardSlot" type="Node2D"]
+scale = Vector2(0.6, 0.6)
+script = ExtResource("1_xclqi")
+
+[node name="CardSlotImage" type="Sprite2D" parent="."]
+position = Vector2(-1.3709068e-06, 0.5000038)
+scale = Vector2(0.8222222, 0.7811321)
+texture = ExtResource("2_jg36a")
