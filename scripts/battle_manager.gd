@@ -79,8 +79,64 @@ var current_spell_target_restrictions: Dictionary = {}
 func _ready():
 	
 	await get_tree().process_frame
-	# 3. NOVO: Encontramos os nós usando caminhos absolutos
-	# Este método é a chave para o multiplayer funcionar [00:07:34]
+	
+	if not get_parent().is_multiplayer_authority():
+		return 
+	
+	# Pega o nome do nosso "campo" pai ("1" ou "2")
+	var player_id = get_parent().name 
+	# O oponente é o "outro" número
+	var opponent_id = "2" if player_id == "1" else "1"
+	
+	# Caminho para os nós do oponente
+	var opponent_path = "/root/Main/" + opponent_id
+
+	# --- INÍCIO DA CORREÇÃO ---
+	# Referências locais (usando get_parent() para pegar siblings)
+	# "get_parent()" aqui se refere ao nó "1" (PlayerField)
+	var local_parent = get_parent()
+	end_turn_button = local_parent.get_node("EndTurnButton")
+	battle_timer = local_parent.get_node("BattleTimer")
+	player_deck = local_parent.get_node("Deck")
+	card_manager = local_parent.get_node("CardManager")
+	player_health_label = local_parent.get_node("PlayerHealthLabel")
+	player_discard = local_parent.get_node("PlayerDiscard")
+	player_energy_label = local_parent.get_node("PlayerEnergyLabel")
+	confirm_targets_button = local_parent.get_node("ConfirmTargetsButton")
+	player_slots_container = local_parent.get_node("PlayerCardSlots")
+
+	# Referências remotas (dentro do OpponentField - aqui usamos caminho absoluto)
+	opponent_deck = get_node(opponent_path + "/Deck")
+	opponent_hand = get_node(opponent_path + "/OpponentHand")
+	opponent_health_label = get_node(opponent_path + "/OpponentHealthLabel")
+	opponent_discard = get_node(opponent_path + "/OpponentDiscard")
+	opponent_energy_label = get_node(opponent_path + "/OpponentEnergyLabel")
+	# --- FIM DA CORREÇÃO ---
+
+	# --- Lógica original do _ready() (agora podemos usá-la) ---
+	update_health_labels()
+	update_energy_labels()
+	end_turn_button.pressed.connect(_on_end_turn_button_pressed)
+	
+	# Desabilita o oponente
+	opponent_deck.set_process(false) 
+	
+	# Pega referências para os slots (lógica antiga ainda funciona)
+	# (Já temos 'player_slots_container' da correção acima)
+	for i in range(player_slots_container.get_child_count()):
+		var slot = player_slots_container.get_child(i)
+		if slot.card_slot_type == "Criatura":
+			player_creature_slots_ref.append(slot)
+		else:
+			player_land_slots_ref.append(slot)
+	
+	var opponent_creature_slots = get_node(opponent_path + "/OpponentCardSlots")
+	for i in range(opponent_creature_slots.get_child_count()):
+		opponent_creature_slots_ref.append(opponent_creature_slots.get_child(i))
+
+func initialize_references():
+	
+	# Não precisamos mais do 'await' aqui, pois o multiplayer.gd já esperou.
 	
 	# Pega o nome do nosso "campo" pai ("1" ou "2")
 	var player_id = get_parent().name 
@@ -104,19 +160,20 @@ func _ready():
 	player_slots_container = get_node(player_path + "/PlayerCardSlots")
 
 	# Referências remotas (dentro do OpponentField)
-	opponent_deck = get_node(opponent_path + "/Deck")
+	opponent_deck = get_node(opponent_path + "/Deck") # (Verifique se o seu nó em opponent_field.tscn se chama "Deck")
 	opponent_hand = get_node(opponent_path + "/OpponentHand")
 	opponent_health_label = get_node(opponent_path + "/OpponentHealthLabel")
 	opponent_discard = get_node(opponent_path + "/OpponentDiscard")
 	opponent_energy_label = get_node(opponent_path + "/OpponentEnergyLabel")
 
-	# --- Lógica original do _ready() (agora podemos usá-la) ---
+	# --- Lógica original do _ready() ---
 	update_health_labels()
 	update_energy_labels()
 	end_turn_button.pressed.connect(_on_end_turn_button_pressed)
 	
 	# Desabilita o oponente (este script não controla mais a IA)
-	opponent_deck.set_process(false) 
+	if is_instance_valid(opponent_deck):
+		opponent_deck.set_process(false) 
 	
 	# Pega referências para os slots (lógica antiga ainda funciona)
 	var player_creature_slots = get_parent().get_node("PlayerCardSlots")

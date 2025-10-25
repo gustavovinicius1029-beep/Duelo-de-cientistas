@@ -53,6 +53,7 @@ func _draw_card_action(card_drawn_name: String):
 	new_card.name = "Card_" + card_drawn_name.replace(" ", "_")
 	new_card.card_name = card_drawn_name
 	card_manager_ref.add_child(new_card)
+	new_card.global_position = self.global_position
 
 	var card_data = card_database_ref.CARDS[card_drawn_name]
 			

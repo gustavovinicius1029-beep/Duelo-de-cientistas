@@ -56,7 +56,8 @@ func _draw_card_action():
 	var new_card = card_scene.instantiate()
 	
 	new_card.name = "OpponentCard" # Nome genérico
-	opponent_hand_ref.add_child(new_card)
+	card_manager_ref.add_child(new_card)
+	new_card.global_position = self.global_position
 	
 	opponent_hand_ref.add_card_to_hand(new_card, CARD_DRAW_SPEED)
 	update_card_count_label()

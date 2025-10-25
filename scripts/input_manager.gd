@@ -70,24 +70,17 @@ func raycast_at_cursor():
 			if collider_parent == deck_ref:
 				print("InputManager: Clicou no DECK do Jogador.")
 				
-				# --- INÍCIO DA CORREÇÃO DE COMPRA MANUAL ---
 				if deck_ref.drawn_card_this_turn:
 					print("InputManager: Já comprou carta neste turno.")
 				else:
-					deck_ref.drawn_card_this_turn = true
-					
-					# 1. Diz ao NOSSO BattleManager para comprar NOSSA carta (local)
-					battle_manager_ref.rpc_id(multiplayer.get_unique_id(), "rpc_draw_my_card")
-					
-					# 2. Encontra o ID e o caminho do BattleManager do OPONENTE
+					battle_manager_ref.rpc_draw_my_card() 
 					var player_id = get_parent().name 
 					var opponent_id_str = "2" if player_id == "1" else "1"
 					var opponent_bm_path = "/root/Main/" + opponent_id_str + "/BattleManager"
-					
 					var opponent_peer_id = multiplayer_ref.opponent_peer_id
-					
-					# 3. Envia um RPC para o OPONENTE, dizendo a ele para comprar um "verso"
-					multiplayer.rpc_id(opponent_peer_id, opponent_bm_path, "rpc_draw_opponent_card")
+					var opponent_bm_node = get_node_or_null(opponent_bm_path)
+					if is_instance_valid(opponent_bm_node):
+						opponent_bm_node.rpc_id(opponent_peer_id, "rpc_draw_opponent_card")
 			else:
 				print("InputManager: Colisão na camada DECK, mas não era o deck do jogador (era ", collider_parent.name, ")")
 		

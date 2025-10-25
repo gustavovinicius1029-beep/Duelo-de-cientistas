@@ -4,6 +4,7 @@ extends Node2D
 @onready var ip_address_line_edit = $IPAddressLineEdit
 @onready var host_button = $HostButton
 @onready var join_button = $JoinButton
+@onready var host_ip_label = $HostIPLabel
 
 # As cenas que representam os "lados" do campo de batalha
 var player_field_scene = preload("res://scenes/player_field.tscn")
@@ -37,6 +38,7 @@ func _ready():
 	host_button.pressed.connect(_on_host_button_pressed)
 	join_button.pressed.connect(_on_join_button_pressed)
 	
+	
 	# --- NOVO: Conectar Sinais de Rede ---
 	# Estes sinais nos dirão o estado real da conexão.
 	
@@ -49,8 +51,28 @@ func _ready():
 	# --- FIM DA NOVA SEÇÃO ---
 
 # Chamado quando o jogador clica em "Host"
+
+func _display_host_ip():
+	var local_addresses = IP.get_local_addresses()
+	var host_ip = "IP não encontrado."
+	
+	# Passa por todos os IPs que a máquina possui
+	for ip in local_addresses:
+		# Nós queremos um endereço IPv4 (sem ":")
+		# e que não seja o "localhost" (127.0.0.1)
+		if ip != "127.0.0.1" and not ":" in ip:
+			host_ip = ip
+			break # Pega o primeiro IP de rede local válido que encontrar
+			
+	if is_instance_valid(host_ip_label):
+		host_ip_label.text = "Seu IP de Host: " + host_ip
+	else:
+		print("AVISO: Nó 'HostIPLabel' não encontrado em main.tscn. Não é possível exibir o IP.")
+
 func _on_host_button_pressed():
 	print("Iniciando como Host (Servidor)...")
+	host_ip_label.visible = true
+	_display_host_ip()
 	
 	var peer = ENetMultiplayerPeer.new()
 	var error = peer.create_server(DEFAULT_PORT)
@@ -137,6 +159,8 @@ func show_lobby_ui():
 
 # Esta função (start_game) não mudou, mas é chamada em um momento diferente
 func start_game(player_id, opponent_id_arg):
+	
+	host_ip_label.visible = false
 	# Instancia as cenas
 	var player_field = player_field_scene.instantiate()
 	var opponent_field = opponent_field_scene.instantiate()
@@ -170,31 +194,40 @@ func start_game(player_id, opponent_id_arg):
 			return
 
 		# --- INÍCIO DA CORREÇÃO DE RPC ---
-		# 3. Envia os decks para os BattleManagers corretos
-		# Sintaxe: multiplayer.rpc_id(id_do_alvo, caminho_absoluto_do_no_no_alvo, nome_da_funcao, argumentos...)
 		
-		# HOST (peer 1): Define seu deck
-		multiplayer.rpc_id(1, "/root/Main/1/BattleManager", "rpc_set_my_deck", deck_1_list)
-		# HOST (peer 1): Define o deck do oponente
-		multiplayer.rpc_id(1, "/root/Main/1/BattleManager", "rpc_set_opponent_deck_size", deck_2_list.size())
+		# 3. Pegamos a referência para os BattleManagers de cada jogador
+		# (O script multiplayer.gd está em /root/Main, então podemos usar get_node)
+		var bm_host = get_node("/root/Main/1/BattleManager")
+		var bm_client = get_node("/root/Main/2/BattleManager")
 		
-		# CLIENTE (opponent_peer_id): Define seu deck
-		multiplayer.rpc_id(opponent_peer_id, "/root/Main/2/BattleManager", "rpc_set_my_deck", deck_2_list)
-		# CLIENTE (opponent_peer_id): Define o deck do oponente
-		multiplayer.rpc_id(opponent_peer_id, "/root/Main/2/BattleManager", "rpc_set_opponent_deck_size", deck_1_list.size())
+		if not is_instance_valid(bm_host) or not is_instance_valid(bm_client):
+			print("ERRO CRÍTICO: BattleManagers não encontrados! Abortando.")
+			return
+
+		# Sintaxe correta:
+		# get_node(caminho).rpc_id(ID_DO_PEER, "nome_da_funcao", argumentos...)
+		
+		# HOST (peer 1): Executa as funções no nó bm_host
+		bm_host.rpc_id(1, "rpc_set_my_deck", deck_1_list)
+		bm_host.rpc_id(1, "rpc_set_opponent_deck_size", deck_2_list.size())
+		
+		# CLIENTE (opponent_peer_id): Executa as funções no nó bm_client
+		bm_client.rpc_id(opponent_peer_id, "rpc_set_my_deck", deck_2_list)
+		bm_client.rpc_id(opponent_peer_id, "rpc_set_opponent_deck_size", deck_1_list.size())
 
 		# 4. Espera a sincronização
 		await get_tree().create_timer(0.5).timeout 
+		
 		print("Host: Enviando RPCs para comprar mãos iniciais...")
 
-		# 5. Manda comprar as cartas
+		# 5. Manda comprar as cartas (usando as mesmas referências)
 		for i in range(5): 
 			# Chamadas para o HOST (peer 1)
-			multiplayer.rpc_id(1, "/root/Main/1/BattleManager", "rpc_draw_my_card")
-			multiplayer.rpc_id(1, "/root/Main/1/BattleManager", "rpc_draw_opponent_card")
+			bm_host.rpc_id(1, "rpc_draw_my_card")
+			bm_host.rpc_id(1, "rpc_draw_opponent_card")
 			
 			# Chamadas para o CLIENTE (opponent_peer_id)
-			multiplayer.rpc_id(opponent_peer_id, "/root/Main/2/BattleManager", "rpc_draw_my_card")
-			multiplayer.rpc_id(opponent_peer_id, "/root/Main/2/BattleManager", "rpc_draw_opponent_card")
+			bm_client.rpc_id(opponent_peer_id, "rpc_draw_my_card")
+			bm_client.rpc_id(opponent_peer_id, "rpc_draw_opponent_card")
 			
-			await get_tree().create_timer(0.2).timeout
+			await get_tree().create_timer(0.1).timeout
