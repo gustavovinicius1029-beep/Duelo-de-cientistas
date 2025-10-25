@@ -1,7 +1,7 @@
 extends Node
 
 # Esta função espera um ARRAY de alvos
-func trigger_ability(battle_manager, target_cards: Array, spell_card):
+func trigger_ability(battle_manager, target_cards: Array, spell_card, caster_owner: String):
 	print("HABILIDADE ATIVADA: Surto da Peste!")
 	
 	# Desativa botões enquanto o feitiço resolve
@@ -30,7 +30,7 @@ func trigger_ability(battle_manager, target_cards: Array, spell_card):
 	# Espera e destrói o feitiço
 	await battle_manager.wait_seconds(0.5)
 	if is_instance_valid(spell_card):
-		await battle_manager.destroy_card(spell_card, "Jogador")
+		await battle_manager.destroy_card(spell_card, caster_owner)
 		
 	# Reativa os botões
 	battle_manager.enable_game_inputs()

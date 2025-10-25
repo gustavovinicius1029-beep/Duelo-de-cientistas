@@ -15,22 +15,27 @@ var opponent_peer_id = 0
 
 
 var deck_1_list: Array[String] = [
-	"Início da Peste", "Woolsthorpe Manor", "Trinity College", "Canhão de Newton", 
-	"Início da Peste", "Woolsthorpe Manor", "Trinity College",
-	"Início da Peste", "Woolsthorpe Manor","Woolsthorpe Manor", "Trinity College",
-	"Trinity College","Início da Peste","Woolsthorpe Manor", "Trinity College",
-	"Woolsthorpe Manor", "Trinity College","Woolsthorpe Manor", "Trinity College",
-	"Início da Peste", "Woolsthorpe Manor", "Trinity College","A Peste","A Peste",
-	"A Peste","A Peste","A Peste","A Peste",
+	"Woolsthorpe Manor", "Trinity College",  
+	"Surto da Peste","Surto da Peste",
+	"Woolsthorpe Manor", "Trinity College",  
+	"Início da Peste", "Início da Peste",
+	"Woolsthorpe Manor", "Trinity College",  
+	"Início da Peste", "Início da Peste",
+	"Woolsthorpe Manor", "Trinity College",  
+	
+	
 ]
 
 var deck_2_list: Array[String] = [
-	"Rato da Peste", "Woolsthorpe Manor", "Trinity College", "Canhão de Newton", "Rato da Peste", "Woolsthorpe Manor", "Trinity College",
-	"Rato da Peste", "Woolsthorpe Manor","Woolsthorpe Manor", "Trinity College",
-	"Trinity College","Rato da Peste","Woolsthorpe Manor", "Trinity College",
-	"Woolsthorpe Manor", "Trinity College","Woolsthorpe Manor", "Trinity College",
-	"Rato da Peste", "Woolsthorpe Manor", "Trinity College","A Peste","A Peste",
-	"A Peste","A Peste","A Peste","A Peste",
+	"Woolsthorpe Manor", "Trinity College",  
+	"Canhão de Newton",
+	"Woolsthorpe Manor", "Trinity College",  
+	"Canhão de Newton",
+	"Woolsthorpe Manor", "Trinity College",  
+	"Canhão de Newton",
+	"Woolsthorpe Manor", "Trinity College",  
+	"Canhão de Newton",
+	
 ]
 
 
@@ -221,7 +226,7 @@ func start_game(player_id, opponent_id_arg):
 		print("Host: Enviando RPCs para comprar mãos iniciais...")
 
 		# 5. Manda comprar as cartas (usando as mesmas referências)
-		for i in range(5): 
+		for i in range(7): 
 			# Chamadas para o HOST (peer 1)
 			bm_host.rpc_id(1, "rpc_draw_my_card")
 			bm_host.rpc_id(1, "rpc_draw_opponent_card")
@@ -231,3 +236,8 @@ func start_game(player_id, opponent_id_arg):
 			bm_client.rpc_id(opponent_peer_id, "rpc_draw_opponent_card")
 			
 			await get_tree().create_timer(0.1).timeout
+		
+		print("Host: Iniciando o primeiro turno.")
+		
+		bm_host.rpc_id(1, "start_turn", "Jogador")
+		bm_client.rpc_id(opponent_peer_id, "start_turn", "Oponente")

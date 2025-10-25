@@ -11,7 +11,7 @@ const CARDS = {
 	"Woolsthorpe Manor": [0,0,"gera 2", "Terreno",0,2, null],
 	"Início da Peste": [0,0,"Uma criatura alvo ganha o marcador Peste (0/-1). Para cada marcador Peste em campo invoca o Rato da peste", "feitiço",3,0, "res://scripts/abilities/inicio_da_peste.gd"],
 	"Surto da Peste": [0,0,"Destrua até duas criaturas alvo com resistência 2 ou menor.", "feitiço",4,0, "res://scripts/abilities/surto_da_peste.gd"], # NOVO
-	"A Peste": [0,0,"Destrua todas as criaturas. Para cada... (ver desc)", "feitiço",8,0, "res://scripts/abilities/a_peste.gd"], # NOVO
+	"A Peste": [0,0,"Destrua todas as criaturas. Invoca Rato da Peste para cada destruição", "feitiço",8,0, "res://scripts/abilities/a_peste.gd"], # NOVO
 
 	# Adicione mais cartas e seus atributos aqui
 }

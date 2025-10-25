@@ -115,7 +115,7 @@ func finish_drag():
 			if spell_name == "Início da Peste":
 				print("Iniciando modo de targeting (alvo único).")
 				var restrictions = {"type": "Criatura"}
-				battle_manager_ref.setup_targeting_state(card_being_dragged, 1, restrictions, false)
+				battle_manager_ref.setup_targeting_state(card_being_dragged, 1, restrictions, true)
 			
 			elif spell_name == "Surto da Peste":
 				print("Iniciando modo de targeting (múltiplos alvos).")
@@ -123,11 +123,23 @@ func finish_drag():
 				battle_manager_ref.setup_targeting_state(card_being_dragged, 2, restrictions, true)
 			
 			elif spell_name == "A Peste":
-				# Este feitiço é GLOBAL (sem alvo) e resolve imediatamente
+				var player_id = get_parent().name 
+				var opponent_id_str = "2" if player_id == "1" else "1"
+				var opponent_bm_path = "/root/Main/" + opponent_id_str + "/BattleManager"
+				var opponent_bm = get_node_or_null(opponent_bm_path)
+				var multiplayer_ref = get_node("/root/Main") 
+				var opponent_peer_id = multiplayer_ref.opponent_peer_id
+				
+				# 2. Enviar RPC para o oponente executar o feitiço
+				if is_instance_valid(opponent_bm):
+					opponent_bm.rpc_id(opponent_peer_id, "rpc_opponent_cast_global_spell", "A Peste")
+
+				# 3. Este feitiço é GLOBAL e resolve imediatamente (localmente)
 				print("Lançando feitiço global 'A Peste'.")
 				if card_being_dragged.ability_script != null:
 					# Chama a habilidade e ESPERA (await) ela terminar
-					await card_being_dragged.ability_script.trigger_ability(battle_manager_ref, card_being_dragged)
+					# 4. Passa "Jogador" como o dono (caster)
+					await card_being_dragged.ability_script.trigger_ability(battle_manager_ref, card_being_dragged, "Jogador")
 				else:
 					print("ERRO: 'A Peste' sem ability_script!")
 			
@@ -145,19 +157,7 @@ func finish_drag():
 		# 4. Verifica slot (vazio e tipo correto)
 		if card_slot_found and not card_slot_found.card_in_slot and card_being_dragged.card_type == card_slot_found.card_slot_type:
 			
-			# REMOVIDO: Verificação de Limite de Criatura (Etapa 5 antiga)
-			# if card_being_dragged.card_type == "Criatura" and battle_manager_ref.player_played_creature_this_turn:
-			#	print("CardManager: Já jogou uma criatura neste turno!")
-			#	player_hand_ref.add_card_to_hand(card_being_dragged, DEFAULT_CARD_MOVE_SPEED)
-			#	card_being_dragged = null
-			#	return
-			
-			# Joga a carta:
-			
 			# Consome energia (se não for terreno)
-			if card_being_dragged.card_type != "Terreno":
-				battle_manager_ref.player_current_energy -= card_being_dragged.energy_cost
-				battle_manager_ref.update_energy_labels()
 				
 			# Posiciona e dimensiona
 			card_being_dragged.global_position = card_slot_found.global_position
@@ -250,9 +250,37 @@ func card_clicked(card: Node2D):
 			unselect_selected_monster()
 			return
 
+
 		if not battle_manager_ref.opponent_has_creatures(): # Ataque Direto
+			
+			
+			# 1. Encontrar índice do atacante
+			var attacker_slot_node = card.card_slot_card_is_in
+			var attacker_slot_index = battle_manager_ref.player_creature_slots_ref.find(attacker_slot_node)
+			
+			if attacker_slot_index == -1:
+				print("ERRO: Não foi possível encontrar o índice de slot para o ataque direto.")
+				unselect_selected_monster()
+				return
+
+			# 2. Encontrar o BattleManager do oponente e o peer_id
+			var player_id = get_parent().name 
+			var opponent_id_str = "2" if player_id == "1" else "1"
+			var opponent_bm_path = "/root/Main/" + opponent_id_str + "/BattleManager"
+			var opponent_bm = get_node_or_null(opponent_bm_path)
+			var multiplayer_ref = get_node("/root/Main") 
+			var opponent_peer_id = multiplayer_ref.opponent_peer_id
+			
+			# 3. Enviar RPC para o oponente
+			if is_instance_valid(opponent_bm):
+				# J2 (oponente) receberá (índice_atacante_J1)
+				opponent_bm.rpc_id(opponent_peer_id, "rpc_receive_direct_attack", attacker_slot_index)
+				
+			# 4. Executar o ataque localmente
 			unselect_selected_monster()
-			battle_manager_ref.direct_attack(card, "Jogador")
+			await battle_manager_ref.direct_attack(card, "Jogador")
+		
+		
 		else: # Seleção para atacar criatura
 			if selected_monster == card:
 				unselect_selected_monster()

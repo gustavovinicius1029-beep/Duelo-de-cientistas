@@ -62,3 +62,10 @@ func calculate_card_position(index: int) -> Vector2:
 func animate_card_to_position(card: Node2D, position: Vector2, speed: float = DEFAULT_CARD_MOVE_SPEED):
 	var tween = get_tree().create_tween()
 	tween.tween_property(card, "position", position, speed)
+	
+func remove_card_from_hand_by_rpc() -> Node2D:
+	if not opponent_hand.is_empty():
+		var card_to_remove = opponent_hand.pop_front() # Pega a primeira carta
+		update_hand_positions(DEFAULT_CARD_MOVE_SPEED)
+		return card_to_remove # RETORNA a carta
+	return null # Retorna nulo se a mão estiver vazia

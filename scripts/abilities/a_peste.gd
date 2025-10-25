@@ -1,7 +1,7 @@
 extends Node
 
 # Esta habilidade não tem alvo, ela afeta o campo global
-func trigger_ability(battle_manager, spell_card):
+func trigger_ability(battle_manager, spell_card, caster_owner: String):
 	print("HABILIDADE ATIVADA: A Peste!")
 	
 	# 1. Desativa entradas
@@ -34,13 +34,16 @@ func trigger_ability(battle_manager, spell_card):
 	if destroyed_creature_count > 0:
 		for i in range(destroyed_creature_count):
 			print("Invocando Rato da Peste ", i + 1)
-			await battle_manager.summon_token("Rato da Peste", "Jogador")
+			# --- INÍCIO DA ALTERAÇÃO ---
+			# 2. Usa 'caster_owner' para invocar o token
+			await battle_manager.summon_token("Rato da Peste", caster_owner)
+			# --- FIM DA ALTERAÇÃO ---
 			await battle_manager.wait_seconds(0.2)
 	
 	# 6. Destrói a própria carta de feitiço
 	await battle_manager.wait_seconds(0.5)
 	if is_instance_valid(spell_card):
-		await battle_manager.destroy_card(spell_card, "Jogador")
+		await battle_manager.destroy_card(spell_card, caster_owner)
 		
 	# 7. Reativa entradas
 	battle_manager.enable_game_inputs()
