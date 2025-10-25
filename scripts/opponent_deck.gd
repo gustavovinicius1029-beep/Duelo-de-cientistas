@@ -1,5 +1,7 @@
 extends Node2D
 
+signal card_drawn(card: Node2D)
+
 const CARD_SCENE_PATH = "res://scenes/opponent_card.tscn"
 var card_scene = preload(CARD_SCENE_PATH)
 
@@ -52,16 +54,26 @@ func draw_card():
 	synced_card_count -= 1
 	_draw_card_action()
 
-func _draw_card_action(): 
+func _draw_card_action():
 	var new_card = card_scene.instantiate()
-	
+
 	new_card.name = "OpponentCard" # Nome genérico
-	card_manager_ref.add_child(new_card)
+	# Adiciona a carta à cena principal (gerenciada pelo CardManager do jogador local)
+	if is_instance_valid(card_manager_ref):
+		card_manager_ref.add_child(new_card)
+	else:
+		printerr("OpponentDeck: CardManager reference is invalid.")
+		new_card.queue_free() # Limpa a carta se não puder adicioná-la
+		return
+
 	new_card.global_position = self.global_position
-	
-	opponent_hand_ref.add_card_to_hand(new_card, CARD_DRAW_SPEED)
+
+	# REMOVER: opponent_hand_ref.add_card_to_hand(new_card, CARD_DRAW_SPEED)
+	# EMITIR SINAL: Notifica OpponentHand para pegar a carta
+	emit_signal("card_drawn", new_card)
+
 	update_card_count_label()
-	
+
 	if synced_card_count <= 0:
 		if is_instance_valid(deck_area_2d):
 			var shape = deck_area_2d.get_node_or_null("CollisionShape2D")

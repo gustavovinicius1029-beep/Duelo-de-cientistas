@@ -75,73 +75,79 @@ var current_spell_target_count: int = 0
 var current_spell_targets: Array = [] 
 var current_spell_target_restrictions: Dictionary = {}
 
-func _ready():
-	
-	await get_tree().process_frame
-	
-	if not get_parent().is_multiplayer_authority():
-		return 
-	
-	# Pega o nome do nosso "campo" pai ("1" ou "2")
-	var player_id = get_parent().name 
-	# O oponente é o "outro" número
-	var opponent_id = "2" if player_id == "1" else "1"
-	
-	# Caminho para os nós do oponente
-	var opponent_path = "/root/Main/" + opponent_id
+var input_manager_ref # Adicione se não existir
 
-	# --- INÍCIO DA CORREÇÃO ---
-	# Referências locais (usando get_parent() para pegar siblings)
-	# "get_parent()" aqui se refere ao nó "1" (PlayerField)
+func _ready(): # Ou func initialize_references():
+	await get_tree().process_frame
+
+	if not get_parent().is_multiplayer_authority():
+		return
+
+	var player_id = get_parent().name
+	var opponent_id = "2" if player_id == "1" else "1"
+	var opponent_path = "/root/Main/" + opponent_id
 	var local_parent = get_parent()
+
+	# Obter Referências
 	end_turn_button = local_parent.get_node("EndTurnButton")
-	battle_timer = local_parent.get_node("BattleTimer")
+	battle_timer = local_parent.get_node_or_null("BattleTimer") # Use or_null se removeu o timer
 	player_deck = local_parent.get_node("Deck")
-	card_manager = local_parent.get_node("CardManager")
+	card_manager = local_parent.get_node("CardManager") # Necessário para conectar
 	player_health_label = local_parent.get_node("PlayerHealthLabel")
 	player_discard = local_parent.get_node("PlayerDiscard")
 	player_energy_label = local_parent.get_node("PlayerEnergyLabel")
 	confirm_targets_button = local_parent.get_node("ConfirmTargetsButton")
 	player_slots_container = local_parent.get_node("PlayerCardSlots")
+	input_manager_ref = local_parent.get_node("InputManager") # Necessário para conectar
 
-	# Referências remotas (dentro do OpponentField - aqui usamos caminho absoluto)
 	opponent_deck = get_node(opponent_path + "/Deck")
 	opponent_hand = get_node(opponent_path + "/OpponentHand")
 	opponent_health_label = get_node(opponent_path + "/OpponentHealthLabel")
 	opponent_discard = get_node(opponent_path + "/OpponentDiscard")
 	opponent_energy_label = get_node(opponent_path + "/OpponentEnergyLabel")
-	# --- FIM DA CORREÇÃO ---
 
-	# --- Lógica original do _ready() (agora podemos usá-la) ---
+	# Lógica original
 	update_health_labels()
 	update_energy_labels()
 	end_turn_button.pressed.connect(_on_end_turn_button_pressed)
-	
 	if is_instance_valid(confirm_targets_button):
 		confirm_targets_button.pressed.connect(_on_confirm_targets_button_pressed)
+
+	# --- NOVAS CONEXÕES DE SINAL ---
+	if is_instance_valid(card_manager):
+		card_manager.card_played.connect(_on_card_played)
+		card_manager.spell_cast_initiated.connect(_on_spell_cast_initiated)
 	else:
-		print("AVISO: Nó ConfirmTargetsButton não encontrado em _ready()")
-	
-	# Desabilita o oponente
-	opponent_deck.set_process(false) 
-	
-	# Pega referências para os slots (lógica antiga ainda funciona)
-	# (Já temos 'player_slots_container' da correção acima)
+		printerr("BattleManager: CardManager não encontrado.")
+
+	if is_instance_valid(input_manager_ref):
+		input_manager_ref.opponent_card_clicked.connect(_on_opponent_card_clicked)
+		input_manager_ref.player_deck_clicked.connect(_on_player_deck_clicked)
+	else:
+		printerr("BattleManager: InputManager não encontrado.")
+	# --- FIM DAS NOVAS CONEXÕES ---
+
+	if is_instance_valid(opponent_deck):
+		opponent_deck.set_process(false)
+
+	# Pega referências para os slots
 	for i in range(player_slots_container.get_child_count()):
 		var slot = player_slots_container.get_child(i)
 		if slot.card_slot_type == "Criatura":
 			player_creature_slots_ref.append(slot)
 		else:
 			player_land_slots_ref.append(slot)
-	
-	var opponent_slots_container = get_node(opponent_path + "/OpponentCardSlots")
-	for i in range(opponent_slots_container.get_child_count()):
-		var slot = opponent_slots_container.get_child(i)
-	
-		if slot.card_slot_type == "Criatura":
-			opponent_creature_slots_ref.append(slot)
-		else:
-			opponent_land_slots_ref.append(slot)
+
+	var opponent_slots_container = get_node_or_null(opponent_path + "/OpponentCardSlots")
+	if is_instance_valid(opponent_slots_container):
+		for i in range(opponent_slots_container.get_child_count()):
+			var slot = opponent_slots_container.get_child(i)
+			if slot.card_slot_type == "Criatura":
+				opponent_creature_slots_ref.append(slot)
+			else:
+				opponent_land_slots_ref.append(slot)
+	else:
+		printerr("BattleManager: OpponentCardSlots não encontrado.")
 
 func initialize_references():
 	
@@ -327,6 +333,33 @@ func destroy_card(card_to_destroy: Node2D, card_owner: String):
 	animate_card_to_position_and_scale(card_to_destroy, discard_pos, card_manager.CARD_SMALLER_SCALE, 0.2)
 	await wait_seconds(0.2)
 
+func _on_card_played(card: Node2D):
+	# Chamada pelo sinal card_played do CardManager
+	player_cards_on_battlefield.append(card)
+
+	var slot_index = -1
+	var card_type = card.card_type
+
+	if card_type == "Criatura":
+		slot_index = player_creature_slots_ref.find(card.card_slot_card_is_in)
+	elif card_type == "Terreno":
+		slot_index = player_land_slots_ref.find(card.card_slot_card_is_in)
+		player_lands_in_play += card.energy_generation
+		update_energy_labels()
+
+	# Envia RPC para o Oponente
+	if slot_index != -1:
+		var player_id = get_parent().name
+		var opponent_id = "2" if player_id == "1" else "1"
+		var opponent_path = "/root/Main/" + opponent_id
+		var opponent_bm = get_node_or_null(opponent_path + "/BattleManager")
+		var multiplayer_ref = get_node("/root/Main")
+		var opponent_peer_id = multiplayer_ref.opponent_peer_id if multiplayer_ref else 0
+
+		if is_instance_valid(opponent_bm) and opponent_peer_id != 0:
+			opponent_bm.rpc_id(opponent_peer_id, "rpc_opponent_played_card", card.card_name, card_type, slot_index)
+		else:
+			printerr("ERRO (_on_card_played): Oponente BM ou Peer ID inválido.")
 
 func animate_card_to_position_and_scale(card: Node2D, target_position: Vector2, target_scale: Vector2, speed: float):
 	var tween = get_tree().create_tween()
@@ -342,36 +375,42 @@ func update_energy_labels():
 	player_energy_label.text = "E: " + str(player_current_energy) + "/" + str(player_lands_in_play)
 	opponent_energy_label.text = "E: " + str(opponent_current_energy) + "/" + str(opponent_lands_in_play)
 
-func add_player_card_to_battlefield(card: Node2D):
-	player_cards_on_battlefield.append(card)
+func _on_spell_cast_initiated(spell_card: Node2D):
+	# Esta função é chamada quando o CardManager emite o sinal spell_cast_initiated
+	var spell_name = spell_card.card_name
 
-	var slot_index = -1
-	var card_type = card.card_type
+	# Determina se o feitiço tem alvo ou é global
+	if spell_name == "Início da Peste":
+		var restrictions = {"type": "Criatura"}
+		setup_targeting_state(spell_card, 1, restrictions, false) # Alvo único, sem botão de confirmação
+	elif spell_name == "Surto da Peste":
+		var restrictions = {"type": "Criatura", "max_health": 2}
+		setup_targeting_state(spell_card, 2, restrictions, true) # Múltiplos alvos, precisa de botão
+	elif spell_name == "A Peste":
+		# Feitiço global - Lógica de RPC e execução local
+		var player_id = get_parent().name
+		var opponent_id_str = "2" if player_id == "1" else "1"
+		var opponent_bm_path = "/root/Main/" + opponent_id_str + "/BattleManager"
+		var opponent_bm = get_node_or_null(opponent_bm_path)
+		var multiplayer_ref = get_node("/root/Main")
+		var opponent_peer_id = multiplayer_ref.opponent_peer_id if multiplayer_ref else 0
 
-	# Encontra o índice do slot e atualiza a energia
-	if card_type == "Criatura":
-		player_current_energy -= card.energy_cost
-		update_energy_labels()
-		slot_index = player_creature_slots_ref.find(card.card_slot_card_is_in)
-		# (Você pode adicionar criaturas que geram energia aqui se precisar)
+		# Enviar RPC para o oponente executar o feitiço global
+		if is_instance_valid(opponent_bm) and opponent_peer_id != 0:
+			opponent_bm.rpc_id(opponent_peer_id, "rpc_opponent_cast_global_spell", "A Peste")
 
-	elif card_type == "Terreno":
-		slot_index = player_land_slots_ref.find(card.card_slot_card_is_in)
-		player_lands_in_play += card.energy_generation
-		update_energy_labels() # Atualiza display do max
-
-	# --- NOVO: Enviar RPC para o Oponente ---
-	if slot_index != -1:
-		# 1. Encontrar o BattleManager do oponente
-		var player_id = get_parent().name 
-		var opponent_id = "2" if player_id == "1" else "1"
-		var opponent_path = "/root/Main/" + opponent_id
-		var opponent_bm = get_node_or_null(opponent_path + "/BattleManager")
-
-		# 2. Enviar o RPC com nome da carta, tipo e índice do slot
-		if is_instance_valid(opponent_bm):
-			opponent_bm.rpc("rpc_opponent_played_card", card.card_name, card_type, slot_index)
-	# --- FIM DA NOVA SEÇÃO ---
+		# Executar localmente (O AWAIT acontece dentro da função da habilidade)
+		if spell_card.ability_script != null:
+			await spell_card.ability_script.trigger_ability(self, spell_card, "Jogador") # Passa a carta e o dono
+		else:
+			print("ERRO: 'A Peste' sem ability_script!")
+		reset_targeting_state() # Limpa qualquer estado residual (embora não devesse ter)
+	else:
+		print("ERRO: Feitiço desconhecido iniciado: ", spell_name)
+		# Opcional: Devolver a carta para a mão ou destruir
+		if is_instance_valid(spell_card):
+			spell_card.queue_free() # Ou outra lógica de falha
+		reset_targeting_state()
 
 func remove_player_card_from_battlefield(card: Node2D):
 	# Decremento de terrenos agora é feito em destroy_card
@@ -380,62 +419,81 @@ func remove_player_card_from_battlefield(card: Node2D):
 
 # Chamada pelo InputManager quando jogador clica em carta oponente
 # Chamada pelo InputManager quando jogador clica em carta oponente
-func opponent_card_selected(defending_card: Node2D):
-	
-	# --- INÍCIO DA MUDANÇA: LÓGICA DE TARGETING ---
-	# Se estamos selecionando alvo para feitiço, usa a nova lógica
+func _on_opponent_card_clicked(defending_card: Node2D):
+	# Se estamos selecionando alvo para feitiço, usa a lógica de targeting
 	if player_is_targeting_spell:
 		handle_spell_target_selection(defending_card)
 		return # Pula a lógica de ataque
-	# --- FIM DA MUDANÇA ---
-	
-	# Lógica original de ataque (baseada no seu script original)
+
+	# Lógica original de ataque
 	if is_opponent_turn or player_is_attacking: return
-	var attacking_card = card_manager.selected_monster
+	var attacking_card = card_manager.selected_monster # Pega do CardManager
 	if is_instance_valid(attacking_card) and player_cards_on_battlefield.has(attacking_card):
 		if is_instance_valid(defending_card) and opponent_cards_on_battlefield.has(defending_card):
 			if defending_card.card_type == "Criatura":
 				if not player_cards_that_attacked_this_turn.has(attacking_card):
-					
-					# --- INÍCIO DA MODIFICAÇÃO ---
-					
-					# 1. Encontrar índices
+					# Encontrar índices
 					var attacker_slot_node = attacking_card.card_slot_card_is_in
 					var defender_slot_node = defending_card.card_slot_card_is_in
-					
-					# Encontra o índice da nossa carta no array de slots de criatura
 					var attacker_slot_index = player_creature_slots_ref.find(attacker_slot_node)
-					# Encontra o índice da carta do oponente no array de slots de criatura dele
 					var defender_slot_index = opponent_creature_slots_ref.find(defender_slot_node)
-					
+
 					if attacker_slot_index == -1 or defender_slot_index == -1:
 						print("ERRO: Não foi possível encontrar os índices de slot para o ataque.")
 						return
 
-					# 2. Encontrar o BattleManager do oponente e o peer_id
-					var player_id = get_parent().name 
+					# Encontrar o BattleManager do oponente e o peer_id
+					var player_id = get_parent().name
 					var opponent_id_str = "2" if player_id == "1" else "1"
 					var opponent_bm_path = "/root/Main/" + opponent_id_str + "/BattleManager"
 					var opponent_bm = get_node_or_null(opponent_bm_path)
-					var multiplayer_ref = get_node("/root/Main") 
-					var opponent_peer_id = multiplayer_ref.opponent_peer_id
+					var multiplayer_ref = get_node("/root/Main")
+					var opponent_peer_id = multiplayer_ref.opponent_peer_id if multiplayer_ref else 0
 
-					# 3. Enviar RPC para o oponente executar o ataque
-					if is_instance_valid(opponent_bm):
-						# J2 (oponente) receberá (índice_atacante_J1, índice_defensor_J2)
+					# Enviar RPC para o oponente executar o ataque
+					if is_instance_valid(opponent_bm) and opponent_peer_id != 0:
 						opponent_bm.rpc_id(opponent_peer_id, "rpc_receive_attack", attacker_slot_index, defender_slot_index)
-					
-					# 4. Executar o ataque localmente
-					# (await) garante que o jogador não pode fazer outra ação enquanto ataca
-					card_manager.unselect_selected_monster()
+					else:
+						print("ERRO (_on_opponent_card_clicked): Oponente BM ou Peer ID inválido.")
+
+					# Executar o ataque localmente
+					card_manager.unselect_selected_monster() # Pede ao CardManager para deselecionar visualmente
 					await attack(attacking_card, defending_card, "Jogador")
-				else: pass # Já atacou
-			else: pass # Alvo inválido
-		else: card_manager.unselect_selected_monster()
-	else: card_manager.unselect_selected_monster()
+				# else: # Já atacou (não faz nada)
+			# else: # Alvo inválido (não é criatura)
+		else:
+			if is_instance_valid(card_manager): card_manager.unselect_selected_monster()
+	else:
+		if is_instance_valid(card_manager): card_manager.unselect_selected_monster()
 
+func _on_player_deck_clicked():
+	# Esta função é chamada quando o InputManager emite o sinal player_deck_clicked
+	if is_opponent_turn: return # Não pode comprar no turno do oponente
 
-# --- Funções Auxiliares de Verificação ---
+	if is_instance_valid(player_deck):
+		if player_deck.drawn_card_this_turn:
+			print("BattleManager: Já comprou carta neste turno.")
+		else:
+			# Chama o RPC para si mesmo comprar a carta
+			rpc_draw_my_card()
+
+			# Chama o RPC para o oponente ver a animação de compra dele
+			var player_id = get_parent().name
+			var opponent_id_str = "2" if player_id == "1" else "1"
+			var opponent_bm_path = "/root/Main/" + opponent_id_str + "/BattleManager"
+			var multiplayer_ref = get_node("/root/Main")
+			var opponent_peer_id = multiplayer_ref.opponent_peer_id if multiplayer_ref else 0
+			var opponent_bm_node = get_node_or_null(opponent_bm_path)
+
+			if is_instance_valid(opponent_bm_node) and opponent_peer_id != 0:
+				opponent_bm_node.rpc_id(opponent_peer_id, "rpc_draw_opponent_card")
+			else:
+				print("ERRO (_on_player_deck_clicked): Oponente BM ou Peer ID inválido.")
+
+			player_deck.drawn_card_this_turn = true # Marca que já comprou
+	else:
+		print("ERRO (BattleManager): Referência ao player_deck inválida.")
+
 func player_has_creatures() -> bool:
 	for card in player_cards_on_battlefield:
 		if is_instance_valid(card) and card.card_type == "Criatura": return true

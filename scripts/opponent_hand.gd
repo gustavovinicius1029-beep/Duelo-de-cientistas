@@ -14,58 +14,71 @@ const DEFAULT_CARD_MOVE_SPEED = 0.1
 var center_screen_x: float
 var opponent_hand: Array[Node2D] = [] # NOVO: Array para as cartas do oponente
 
-func _ready() -> void:
-	
-	# 3. Espera um frame
-	await get_tree().process_frame
-	
-	# 4. Encontra os nós
-	# Este script está no "opponent_field"
-	var parent_id = get_parent().name # O ID do campo do oponente ("1" ou "2")
-	var player_id = "1" if parent_id == "2" else "2" # O ID do campo do jogador
+var opponent_deck_ref # Adicione esta variável se não existir
 
-	var player_path = "/root/Main/" + player_id # Caminho para os gerenciadores
-	
+func _ready() -> void:
+	await get_tree().process_frame
+
+	var parent_id = get_parent().name
+	var player_id = "1" if parent_id == "2" else "2" # O ID do campo do jogador local
+
+	var opponent_path = "/root/Main/" + parent_id # Caminho para o OpponentField
+	var player_path = "/root/Main/" + player_id # Caminho para o PlayerField (onde estão os managers)
+
+	# As referências aos managers são para o CardManager do jogador local,
+	# pois é ele quem gerencia todas as cartas na cena.
 	card_manager_ref = get_node(player_path + "/CardManager")
 	battle_manager_ref = get_node(player_path + "/BattleManager")
+	opponent_deck_ref = get_node(opponent_path + "/Deck") # Referência ao deck do oponente
+
 	center_screen_x = get_viewport_rect().size.x / 2
-# Adiciona uma carta ao array da mão do oponente
-func add_card_to_hand(card: Node2D, speed: float = DEFAULT_CARD_MOVE_SPEED):
+
+	# --- NOVA CONEXÃO DE SINAL ---
+	if is_instance_valid(opponent_deck_ref):
+		opponent_deck_ref.card_drawn.connect(_on_opponent_card_drawn)
+	else:
+		printerr("OpponentHand: OpponentDeck não encontrado.")
+
+func _on_opponent_card_drawn(card: Node2D):
+	# Chamada quando OpponentDeck emite card_drawn
+	# A carta já foi criada e adicionada à cena pelo OpponentDeck
+	# Apenas adicionamos à lógica da mão e animamos
+	var speed = Constants.CARD_DRAW_SPEED if Constants else 0.2
+	add_card_to_hand(card, speed)
+
+func add_card_to_hand(card: Node2D, speed: float = Constants.DEFAULT_CARD_MOVE_SPEED if Constants else 0.1):
 	if not opponent_hand.has(card):
-		opponent_hand.append(card) # NOVO: Adiciona no final para que as cartas cresçam da direita para a esquerda
-	
+		opponent_hand.append(card)
 	update_hand_positions(speed)
 
-# Remove uma carta do array da mão do oponente
-func remove_card_from_hand(card: Node2D, speed: float = DEFAULT_CARD_MOVE_SPEED): # NOVO: Adiciona 'speed'
+func remove_card_from_hand(card: Node2D, speed: float = Constants.DEFAULT_CARD_MOVE_SPEED if Constants else 0.1):
 	if opponent_hand.has(card):
 		opponent_hand.erase(card)
-		update_hand_positions(speed) # Passa a velocidade
+		if speed > 0: # Só atualiza se não for remoção instantânea (como no RPC)
+			update_hand_positions(speed)
 
-# Atualiza a posição de todas as cartas na mão do oponente
-func update_hand_positions(speed: float = DEFAULT_CARD_MOVE_SPEED):
+func update_hand_positions(speed: float = Constants.DEFAULT_CARD_MOVE_SPEED if Constants else 0.1):
 	for i in range(opponent_hand.size()):
 		var card = opponent_hand[i]
 		var new_position = calculate_card_position(i)
 		animate_card_to_position(card, new_position, speed)
-		
-		# Não precisamos armazenar hand_position na carta do oponente, pois não há snap-back
-		# card.hand_position = new_position # REMOVIDO
 
-# Calcula a posição X e Y de uma carta na mão com base no seu índice (para o oponente)
 func calculate_card_position(index: int) -> Vector2:
-	var total_hand_width = (opponent_hand.size() - 1) * CARD_WIDTH
-	# NOVO: Lógica invertida para que as cartas cresçam da direita para a esquerda
-	var x_offset = center_screen_x - (index * CARD_WIDTH) + (total_hand_width / 2)
-	return Vector2(x_offset, HAND_Y_POSITION)
+	var card_width = Constants.CARD_WIDTH if Constants else 120
+	var hand_y = Constants.HAND_Y_POSITION_OPPONENT if Constants else 30
+	var total_hand_width = (opponent_hand.size() - 1) * card_width
+	var x_offset = center_screen_x - (index * card_width) + (total_hand_width / 2)
+	return Vector2(x_offset, hand_y)
 
-func animate_card_to_position(card: Node2D, position: Vector2, speed: float = DEFAULT_CARD_MOVE_SPEED):
+func animate_card_to_position(card: Node2D, position: Vector2, speed: float = Constants.DEFAULT_CARD_MOVE_SPEED if Constants else 0.1):
 	var tween = get_tree().create_tween()
 	tween.tween_property(card, "position", position, speed)
-	
+
 func remove_card_from_hand_by_rpc() -> Node2D:
+	# Esta função é chamada via RPC pelo BattleManager quando o oponente joga uma carta
 	if not opponent_hand.is_empty():
-		var card_to_remove = opponent_hand.pop_front() # Pega a primeira carta
-		update_hand_positions(DEFAULT_CARD_MOVE_SPEED)
-		return card_to_remove # RETORNA a carta
-	return null # Retorna nulo se a mão estiver vazia
+		var card_to_remove = opponent_hand.pop_front() # Pega a primeira (FIFO visual)
+		remove_card_from_hand(card_to_remove, 0) # Remove da lógica instantaneamente
+		update_hand_positions(Constants.DEFAULT_CARD_MOVE_SPEED if Constants else 0.1) # Atualiza posições das restantes
+		return card_to_remove # Retorna a carta removida para o BattleManager animar
+	return null

@@ -226,7 +226,7 @@ func start_game(player_id, opponent_id_arg):
 		print("Host: Enviando RPCs para comprar mãos iniciais...")
 
 		# 5. Manda comprar as cartas (usando as mesmas referências)
-		for i in range(7): 
+		for i in range(Constants.STARTING_HAND_SIZE): 
 			# Chamadas para o HOST (peer 1)
 			bm_host.rpc_id(1, "rpc_draw_my_card")
 			bm_host.rpc_id(1, "rpc_draw_opponent_card")
