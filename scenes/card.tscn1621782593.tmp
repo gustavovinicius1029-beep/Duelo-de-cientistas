@@ -375,7 +375,6 @@ one_shot = true
 
 [node name="CardDetailsPopup" parent="." instance=ExtResource("7_8w5pg")]
 visible = false
-mouse_filter = 2
 
 [connection signal="mouse_entered" from="Area2D" to="." method="_on_area_2d_mouse_entered"]
 [connection signal="mouse_exited" from="Area2D" to="." method="_on_area_2d_mouse_exited"]

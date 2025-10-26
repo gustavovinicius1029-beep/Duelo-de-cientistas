@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3 uid="uid://drmsdxsktd4u3"]
+[gd_scene load_steps=12 format=3 uid="uid://drmsdxsktd4u3"]
 
 [ext_resource type="Script" uid="uid://b446otpldm8r6" path="res://scripts/opponent_card.gd" id="1_80w62"]
 [ext_resource type="Texture2D" uid="uid://bqr4jkqqv2ig7" path="res://assets/ArtCards/Rato da peste.png" id="2_80w62"]
@@ -6,6 +6,7 @@
 [ext_resource type="Texture2D" uid="uid://cab0fe5vwt5yr" path="res://assets/CartaFundo2.png" id="4_hy522"]
 [ext_resource type="Texture2D" uid="uid://b17cnmhjrnwrp" path="res://assets/sword_icon.png" id="5_td6vg"]
 [ext_resource type="Texture2D" uid="uid://dpellvs6qscnf" path="res://assets/shield_icon.png" id="6_hy522"]
+[ext_resource type="PackedScene" uid="uid://ipl1bdr5djsu" path="res://scenes/ui/CardDetailsPopup.tscn" id="7_hy522"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_ig7tw"]
 size = Vector2(142, 202)
@@ -358,6 +359,14 @@ z_index = 6
 position = Vector2(0.41666603, -29.583334)
 scale = Vector2(0.285, 0.285)
 texture = ExtResource("6_hy522")
+
+[node name="HoverTimer" type="Timer" parent="."]
+wait_time = 0.5
+one_shot = true
+
+[node name="CardDetailsPopup" parent="." instance=ExtResource("7_hy522")]
+visible = false
+mouse_filter = 2
 
 [connection signal="mouse_entered" from="Area2D" to="." method="_on_area_2d_mouse_entered"]
 [connection signal="mouse_exited" from="Area2D" to="." method="_on_area_2d_mouse_exited"]
