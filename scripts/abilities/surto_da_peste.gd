@@ -15,14 +15,14 @@ func trigger_ability(battle_manager, target_cards: Array, spell_card, caster_own
 				print("Destruindo alvo: ", target.name)
 				
 				# Determina o dono da carta para a função destroy_card
-				var owner = ""
+				var card_owner = ""
 				if battle_manager.player_cards_on_battlefield.has(target):
-					owner = "Jogador"
+					card_owner = "Jogador"
 				elif battle_manager.opponent_cards_on_battlefield.has(target):
-					owner = "Oponente"
+					card_owner = "Oponente"
 					
-				if owner:
-					await battle_manager.destroy_card(target, owner)
+				if card_owner:
+					await battle_manager.destroy_card(target, card_owner)
 					await battle_manager.wait_seconds(0.3) # Pausa entre destruições
 				else:
 					print("ERRO: Não foi possível encontrar o dono de ", target.name)

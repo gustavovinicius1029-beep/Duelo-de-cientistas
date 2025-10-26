@@ -2,8 +2,8 @@ func trigger_ability(battle_manager, target_cards: Array, spell_card, caster_own
 # --- FIM DA ALTERAÇÃO ---
 	print("HABILIDADE ATIVADA: Início da Peste!")
 	
-	battle_manager.end_turn_button.disabled = true
-	battle_manager.end_turn_button.visible = false
+	battle_manager.phase_button.disabled = true
+	battle_manager.phase_button.visible = false
 
 	# --- INÍCIO DA ALTERAÇÃO ---
 	# 2. Pega o primeiro (e único) alvo do array
@@ -17,7 +17,7 @@ func trigger_ability(battle_manager, target_cards: Array, spell_card, caster_own
 		target_card.add_plague_counter(1)
 		print("Aplicando Peste em: ", target_card.name)
 	
-	await battle_manager.wait_seconds(0.5)
+	await battle_manager.get_tree().create_timer(0.3).timeout
 
 	# Efeito 2: Contar marcadores (sem alteração)
 	var total_plague_counters = 0
@@ -37,10 +37,10 @@ func trigger_ability(battle_manager, target_cards: Array, spell_card, caster_own
 			# 3. Usa caster_owner para invocar
 			await battle_manager.summon_token("Rato da Peste", caster_owner)
 			# --- FIM DA ALTERAÇÃO ---
-			await battle_manager.wait_seconds(0.3)
+			await battle_manager.get_tree().create_timer(0.3).timeout
 	
 	# 4. Destruir a carta de feitiço
-	await battle_manager.wait_seconds(0.5)
+	await battle_manager.get_tree().create_timer(0.5).timeout
 	if is_instance_valid(spell_card):
 		# --- INÍCIO DA ALTERAÇÃO ---
 		# 4. Usa caster_owner para destruir
@@ -50,7 +50,7 @@ func trigger_ability(battle_manager, target_cards: Array, spell_card, caster_own
 	# 5. Verificar se o alvo morreu (usa target_card)
 	if is_instance_valid(target_card) and target_card.current_health <= 0:
 		print(target_card.name, " sucumbiu à Peste.")
-		await battle_manager.wait_seconds(0.5)
+		await battle_manager.get_tree().create_timer(0.5).timeout
 		
 		# Determina o dono do alvo para a destruição
 		var target_owner = ""
@@ -63,5 +63,5 @@ func trigger_ability(battle_manager, target_cards: Array, spell_card, caster_own
 			await battle_manager.destroy_card(target_card, target_owner) 
 
 	# 6. Reativa o botão de turno (sem alteração)
-	battle_manager.end_turn_button.disabled = false
-	battle_manager.end_turn_button.visible = true
+	battle_manager.phase_button.disabled = false
+	battle_manager.phase_button.visible = true

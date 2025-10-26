@@ -454,11 +454,12 @@ func confirm_blockers():
 		currently_selected_blocker = null
 
 	var blocker_data_for_rpc = {}
-	for attacker_card in declared_blockers:
+	var local_blocker_assignments = declared_blockers.duplicate() # <<<<<<< DUPLICAR AQUI
+	for attacker_card in local_blocker_assignments: # <<<<<<< USAR CÓPIA LOCAL
 		var attacker_slot_index = opponent_creature_slots_ref.find(attacker_card.card_slot_card_is_in)
 		if attacker_slot_index != -1:
 			var blocker_indices = []
-			var blockers_list = declared_blockers[attacker_card]
+			var blockers_list = local_blocker_assignments[attacker_card] # <<<<<<< USAR CÓPIA LOCAL
 			for blocker_card in blockers_list:
 				var blocker_slot_index = player_creature_slots_ref.find(blocker_card.card_slot_card_is_in)
 				if blocker_slot_index != -1:
@@ -469,7 +470,6 @@ func confirm_blockers():
 				blocker_data_for_rpc[str(attacker_slot_index)] = blocker_indices
 		else:
 			printerr("ERRO (confirm_blockers): Índice do slot do atacante ", attacker_card.card_name, " não encontrado.")
-
 	print("Enviando dados de bloqueio via RPC: ", blocker_data_for_rpc)
 	var opponent_bm = get_opponent_battle_manager()
 	var opponent_peer_id = get_opponent_peer_id()
@@ -479,34 +479,35 @@ func confirm_blockers():
 		printerr("ERRO (confirm_blockers): Oponente BM ou Peer ID inválido.")
 	if is_instance_valid(combat_line_drawer_ref):
 		combat_line_drawer_ref.clear_drawing()
-	resolve_combat_damage()
+	resolve_combat_damage(local_blocker_assignments) # <<<<<<< PASSAR COMO ARGUMENTO
 
-# Em scripts/battle_manager.gd
-
-# Em scripts/battle_manager.gd
-
-func resolve_combat_damage():
+# Aceita um argumento opcional; se não for passado (pelo atacante), usa a variável de instância
+func resolve_combat_damage(blocker_assignments_override: Dictionary = {}):
 	print(get_parent().name, ": Resolvendo Dano de Combate") # Adiciona ID para depuração
+	var current_blockers = {}
+	if not blocker_assignments_override.is_empty():
+		current_blockers = blocker_assignments_override.duplicate()
+		print(get_parent().name, ": Usando blocker_assignments_override") # DEBUG
+	else:
+		current_blockers = declared_blockers.duplicate()
+		print(get_parent().name, ": Usando declared_blockers da instância") # DEBUG
+	print(get_parent().name, ": current_blockers a ser usado: ", current_blockers) # DEBUG
+	print(get_parent().name, ": Is current_blockers empty? ", current_blockers.is_empty()) # DEBUG
 	set_current_combat_phase(CombatPhase.COMBAT_DAMAGE)
 	player_is_attacking = true # Flag global para bloquear inputs durante animação
 	disable_game_inputs()
 	var cards_to_destroy: Array = []
 	var local_player_is_attacker = not is_opponent_turn
-	var attacker_cards = declared_attackers.duplicate() # Quem está atacando (lista local)
-	var attacker_battlefield = player_cards_on_battlefield if local_player_is_attacker else opponent_cards_on_battlefield
-	var defender_battlefield = opponent_cards_on_battlefield if local_player_is_attacker else player_cards_on_battlefield
 	var attacker_owner_string = "Jogador" if local_player_is_attacker else "Oponente"
 	var defender_owner_string = "Oponente" if local_player_is_attacker else "Jogador"
 	var processed_attackers: Array = []
-	var current_blockers = declared_blockers.duplicate()
 	for attacker in current_blockers:
 		if not is_instance_valid(attacker): continue
-		processed_attackers.append(attacker)
+		processed_attackers.append(attacker) # Marcar como processado
 		var blockers = current_blockers[attacker]
 		if blockers.is_empty() or not is_instance_valid(blockers[0]): continue
 		var primary_blocker = blockers[0]
 		var original_attacker_pos = attacker.global_position
-		# Posição alvo é sempre perto do defensor primário
 		var attack_target_pos = primary_blocker.global_position + Vector2(0, Constants.BATTLE_POS_OFFSET_Y if local_player_is_attacker else -Constants.BATTLE_POS_OFFSET_Y)
 		attacker.z_index = 5
 		await animate_card_to_position_and_scale(attacker, attack_target_pos, attacker.scale, 0.15)
@@ -526,9 +527,10 @@ func resolve_combat_damage():
 			await animate_card_to_position_and_scale(attacker, original_attacker_pos, attacker.scale, 0.15)
 			attacker.z_index = -1
 		await get_tree().create_timer(0.1).timeout
-	for attacker in attacker_cards: # Itera sobre a lista original de atacantes
+	var all_attackers = declared_attackers.duplicate() # Pega a lista completa de quem iniciou o ataque
+	for attacker in all_attackers: # Itera sobre a lista original de atacantes
 		if processed_attackers.has(attacker) or not is_instance_valid(attacker): continue # Pula se já combateu ou inválido
-		if attacker.current_health > 0:
+		if attacker.current_health > 0: # Checa se o atacante ainda está vivo
 			var original_pos = attacker.global_position
 			var target_y = opponent_health_label.global_position.y if local_player_is_attacker else player_health_label.global_position.y
 			var target_pos = Vector2(attacker.global_position.x, target_y)
@@ -536,10 +538,11 @@ func resolve_combat_damage():
 			await animate_card_to_position_and_scale(attacker, target_pos, attacker.scale, 0.15)
 			print(get_parent().name, ": Dano Direto: ", attacker.card_name)
 			if NORMAL_ATTACK_VFX:
-				var vfx = NORMAL_ATTACK_VFX.instantiate(); vfx.global_position = target_pos
-				if is_instance_valid(card_manager): 
-					card_manager.add_child(vfx); 
-				else: 
+				var vfx = NORMAL_ATTACK_VFX.instantiate()
+				vfx.global_position = target_pos
+				if is_instance_valid(card_manager):
+					card_manager.add_child(vfx)
+				else:
 					get_tree().root.add_child(vfx)
 			if local_player_is_attacker:
 				_apply_direct_damage(attacker) # Função aplica a opponent_health
@@ -558,7 +561,6 @@ func resolve_combat_damage():
 		await get_tree().create_timer(0.2).timeout
 		for item in cards_to_destroy:
 			if is_instance_valid(item.card):
-				# A função destroy_card já lida com remoção dos arrays corretos
 				await destroy_card(item.card, item.owner)
 				await get_tree().create_timer(0.1).timeout
 	declared_attackers.clear()
@@ -568,7 +570,7 @@ func resolve_combat_damage():
 	enable_game_inputs() # Reabilita UI
 	await get_tree().create_timer(0.3).timeout
 	enter_end_combat_phase() # Avança para a próxima fase
-
+	
 func handle_blocker_declaration_click(clicked_card: Node2D):
 
 	if player_cards_on_battlefield.has(clicked_card) and clicked_card.card_type == "Criatura":
@@ -1088,15 +1090,23 @@ func opponent_has_creatures() -> bool:
 	return false
 
 # --- Função de Invocar Token ---
-func summon_token(card_name: String, owner: String):
-	var empty_slot = null; var slots_array = []; var card_to_instance = null
-	if owner == "Jogador": slots_array = player_creature_slots_ref; card_to_instance = card_scene
-	elif owner == "Oponente": slots_array = opponent_creature_slots_ref; card_to_instance = preload("res://scenes/opponent_card.tscn")
-	else: printerr("ERRO summon_token: 'owner' desconhecido: ", owner); return
+func summon_token(card_name: String, card_owner: String):
+	
+	var empty_slot = null
+	var slots_array = []
+	var card_to_instance = null
+	
+	if card_owner == "Jogador": 
+		slots_array = player_creature_slots_ref
+		card_to_instance = card_scene
+	elif card_owner == "Oponente":
+		slots_array = opponent_creature_slots_ref
+		card_to_instance = preload("res://scenes/opponent_card.tscn")
+	else: printerr("ERRO summon_token: 'card_owner' desconhecido: ", card_owner); return
 
 	for slot in slots_array:
 		if is_instance_valid(slot) and not slot.card_in_slot: empty_slot = slot; break
-	if not is_instance_valid(empty_slot): print("BattleManager: Sem slots vazios para ", owner); return
+	if not is_instance_valid(empty_slot): print("BattleManager: Sem slots vazios para ", card_owner); return
 
 	# Instancia VFX
 	if SUMMON_VFX_SCENE:
@@ -1133,7 +1143,7 @@ func summon_token(card_name: String, owner: String):
 	# Atualiza estado
 	empty_slot.card_in_slot = true
 	new_card.card_slot_card_is_in = empty_slot
-	if owner == "Jogador": player_cards_on_battlefield.append(new_card)
+	if card_owner == "Jogador": player_cards_on_battlefield.append(new_card)
 	else: opponent_cards_on_battlefield.append(new_card)
 
 	# Desabilita colisão do slot
