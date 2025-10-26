@@ -1,9 +1,11 @@
-[gd_scene load_steps=9 format=3 uid="uid://bukfa1lhko0lq"]
+[gd_scene load_steps=11 format=3 uid="uid://bukfa1lhko0lq"]
 
 [ext_resource type="Texture2D" uid="uid://dikhuc71e83ib" path="res://assets/CartaFundo.png" id="1_kikvd"]
 [ext_resource type="Script" uid="uid://cxuenp7jhcv4x" path="res://scripts/card.gd" id="1_rjlel"]
 [ext_resource type="Texture2D" uid="uid://bqr4jkqqv2ig7" path="res://assets/ArtCards/Rato da peste.png" id="2_kg30u"]
 [ext_resource type="Texture2D" uid="uid://cab0fe5vwt5yr" path="res://assets/CartaFundo2.png" id="3_ktuci"]
+[ext_resource type="Texture2D" uid="uid://b17cnmhjrnwrp" path="res://assets/sword_icon.png" id="5_6ligt"]
+[ext_resource type="Texture2D" uid="uid://dpellvs6qscnf" path="res://assets/shield_icon.png" id="6_8w5pg"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_ig7tw"]
 size = Vector2(142, 202)
@@ -349,6 +351,22 @@ z_index = 1
 position = Vector2(-0.50000095, 2.6226044e-06)
 scale = Vector2(0.16550925, 0.1706081)
 texture = ExtResource("3_ktuci")
+
+[node name="AttackIndicator" type="Sprite2D" parent="."]
+visible = false
+modulate = Color(0.56425875, 0.17956334, 0.12340724, 1)
+z_index = 5
+position = Vector2(0.41665268, -29.583347)
+scale = Vector2(0.28500003, 0.28500003)
+texture = ExtResource("5_6ligt")
+
+[node name="BlockIndicator" type="Sprite2D" parent="."]
+visible = false
+modulate = Color(0.095408894, 0.48741263, 0.36702174, 1)
+z_index = 6
+position = Vector2(0.41666603, -29.583334)
+scale = Vector2(0.285, 0.285)
+texture = ExtResource("6_8w5pg")
 
 [connection signal="mouse_entered" from="Area2D" to="." method="_on_area_2d_mouse_entered"]
 [connection signal="mouse_exited" from="Area2D" to="." method="_on_area_2d_mouse_exited"]

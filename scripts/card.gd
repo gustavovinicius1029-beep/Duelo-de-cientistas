@@ -9,6 +9,8 @@ var hand_position: Vector2
 @onready var energy_gen_label = $EnergyGenLabel # NOVO: Geração
 @onready var animation_player = $AnimationPlayer
 @onready var card_image = $CardImage
+@onready var attack_indicator: Sprite2D = $AttackIndicator
+@onready var block_indicator: Sprite2D = $BlockIndicator
 
 var card_type: String = ""
 var card_name: String = "" # <-- ADICIONE ESTA LINHA
@@ -78,3 +80,15 @@ func update_health_from_counters():
 	
 	if current_health <= 0:
 		defeated = true
+		
+func show_attack_indicator(visible: bool) -> void:
+	if is_instance_valid(attack_indicator):
+		attack_indicator.visible = visible
+
+func show_block_indicator(visible: bool) -> void:
+	if is_instance_valid(block_indicator):
+		block_indicator.visible = visible
+
+func hide_combat_indicators() -> void:
+	show_attack_indicator(false)
+	show_block_indicator(false)

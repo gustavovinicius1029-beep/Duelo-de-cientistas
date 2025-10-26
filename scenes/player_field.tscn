@@ -125,7 +125,7 @@ script = ExtResource("8_8fuj6")
 position = Vector2(500, 800)
 script = ExtResource("8_8fuj6")
 
-[node name="EndTurnButton" type="Button" parent="."]
+[node name="PhaseButton" type="Button" parent="."]
 offset_left = 48.0
 offset_top = 540.0
 offset_right = 169.0
@@ -156,7 +156,7 @@ scale = Vector2(0.6, 0.6)
 scale = Vector2(0.8240725, 0.78057265)
 texture = ExtResource("9_pnh2f")
 
-[node name="ConfirmTargetsButton" type="Button" parent="."]
+[node name="ConfirmActionButton" type="Button" parent="."]
 visible = false
 offset_left = 49.0
 offset_top = 585.0

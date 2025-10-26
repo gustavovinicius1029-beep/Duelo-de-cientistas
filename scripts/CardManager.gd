@@ -18,7 +18,8 @@ var deck_ref
 var battle_manager_ref
 
 # --- Constantes (sem mudança) ---
-var selected_monster: Node2D = null
+#var selected_monster: Node2D = null
+var selected_attackers: Array[Node2D] = []
 
 func _ready():
 	await get_tree().process_frame
@@ -50,13 +51,22 @@ func _process(_delta):
 
 # Inicia o processo de arrastar uma carta (geralmente da mão)
 func start_drag(card_to_drag: Node2D):
-	unselect_selected_monster() # Pode chamar unselect daqui
+	clear_attacker_selection()
 	card_being_hovered = null
 	card_being_dragged = card_to_drag
 	card_being_dragged.z_index = 10
 	emit_signal("card_drag_started", card_to_drag) # Emite sinal
 
 # Chamado quando o botão esquerdo do mouse é solto
+
+func clear_attacker_selection():
+	# Remove indicadores visuais e limpa a lista
+	for attacker in selected_attackers:
+		if is_instance_valid(attacker):
+			attacker.show_attack_indicator(false)
+			attacker.position.y += 20 # Move de volta se você moveu ao selecionar
+	selected_attackers.clear()
+
 func _on_left_click_released():
 	if card_being_dragged:
 		finish_drag()
@@ -159,86 +169,105 @@ func finish_drag():
 	
 # Gerencia o efeito visual de hover
 func update_hover_state():
-	if card_being_dragged or selected_monster:
+	# Se estiver arrastando ou uma carta já estiver selecionada para ataque, limpe o hover e saia.
+	if card_being_dragged or selected_attackers:
 		if is_instance_valid(card_being_hovered):
-			highlight_card(card_being_hovered, false)
+			highlight_card(card_being_hovered, false) # Remove highlight anterior
 			card_being_hovered = null
 		return
-		
-	var card_under_mouse = raycast_check_for_card()
 
-	if not card_under_mouse:
+	# Verifica qual nó (Carta, Deck, etc.) está sob o mouse
+	var node_under_mouse = raycast_check_for_interactable() # Usaremos uma função auxiliar mais robusta
+
+	# Se não há nada interativo sob o mouse
+	if not is_instance_valid(node_under_mouse):
 		if is_instance_valid(card_being_hovered):
-			highlight_card(card_being_hovered, false)
+			highlight_card(card_being_hovered, false) # Remove highlight anterior
 			card_being_hovered = null
-	else:
-		if card_under_mouse != card_being_hovered:
+	# Se o nó sob o mouse É UMA CARTA (verificamos se tem o script de carta ou uma propriedade específica)
+	elif node_under_mouse.has_method("get_defeated"): # 'get_defeated' existe em card.gd e opponent_card.gd
+		if node_under_mouse != card_being_hovered: # Se é uma *nova* carta sob o mouse
 			if is_instance_valid(card_being_hovered):
-				highlight_card(card_being_hovered, false)
-			highlight_card(card_under_mouse, true)
-			card_being_hovered = card_under_mouse
+				highlight_card(card_being_hovered, false) # Remove highlight anterior
+			highlight_card(node_under_mouse, true) # Aplica highlight na nova
+			card_being_hovered = node_under_mouse
+	# Se o nó sob o mouse NÃO É UMA CARTA (ex: é o Deck)
+	else:
+		if is_instance_valid(card_being_hovered): # Se havia uma carta com highlight
+			highlight_card(card_being_hovered, false) # Remove o highlight dela
+			card_being_hovered = null
 
-# Aplica/Remove o efeito visual de hover
+func raycast_check_for_interactable() -> Node2D:
+	var space = get_world_2d().direct_space_state
+	var query = PhysicsPointQueryParameters2D.new()
+	query.position = get_global_mouse_position()
+	query.collide_with_areas = true
+	# Define a máscara para colidir com cartas E decks
+	query.collision_mask = Constants.COLLISION_LAYER_CARD | Constants.COLLISION_LAYER_DECK | Constants.COLLISION_LAYER_OPPONENT_CARD
+	var result = space.intersect_point(query)
+
+	if not result.is_empty():
+		# Pega o nó pai (Card, Deck, OpponentCard) da Area2D com maior Z-index
+		var highest_node: Node2D = null
+		var highest_z = -INF
+		for item in result:
+			var collider = item.collider
+			if is_instance_valid(collider):
+				var parent_node = collider.get_parent()
+				# Certifica-se que é um Node2D antes de checar z_index
+				if is_instance_valid(parent_node) and parent_node is Node2D and parent_node.z_index >= highest_z:
+					highest_z = parent_node.z_index
+					highest_node = parent_node
+		return highest_node
+	return null
+
 func highlight_card(card: Node2D, hovered: bool):
 	if not is_instance_valid(card): return
-	if card.has_method("get_defeated") and card.get_defeated(): return
-	if card.card_slot_card_is_in != null and hovered: return
-		
+	# VERIFICA NOVAMENTE se é uma carta antes de acessar propriedades específicas de carta
+	if not card.has_method("get_defeated"): return
+	if card.get_defeated(): return
+	#if card_is_in.opponent_hand:
+		#return
+
+	# Acessa card_slot_card_is_in apenas se tiver certeza que é uma carta válida
+	if card.card_slot_card_is_in != null and hovered: return # Não destaca cartas já no slot
+
 	if hovered:
 		card.scale = Constants.CARD_BIGGER_SCALE
-		card.z_index = 2
+		card.z_index = 2 # Traz para frente
 	else:
 		card.scale = Constants.DEFAULT_CARD_SCALE
-		card.z_index = 1
+		card.z_index = 1 # Retorna ao normal (ou 0 se preferir)
 
 # Reseta apenas a seleção visual
 func reset_turn_limits():
-	unselect_selected_monster()
+	clear_attacker_selection()
 
 # Função principal chamada pelo InputManager quando uma carta do jogador é clicada
+# Em scripts/CardManager.gd
+
 func _on_player_card_clicked(card: Node2D):
-	if battle_manager_ref.player_is_targeting_spell:
+	if is_instance_valid(battle_manager_ref) and battle_manager_ref.player_is_targeting_spell: # Adicionada verificação is_instance_valid
 		battle_manager_ref.player_card_selected_for_spell(card)
-		return # Pula lógica de drag/ataque
-
-	if battle_manager_ref.is_opponent_turn or battle_manager_ref.player_is_attacking:
 		return
+	if not is_instance_valid(battle_manager_ref) or battle_manager_ref.is_opponent_turn or battle_manager_ref.player_is_attacking:
+		return
+	if battle_manager_ref.current_combat_phase == battle_manager_ref.CombatPhase.DECLARE_ATTACKERS:
+		if card.card_slot_card_is_in != null and card.card_type == "Criatura" \
+		and not battle_manager_ref.player_cards_that_attacked_this_turn.has(card):
 
-	if card.card_slot_card_is_in == null: # Carta na mão
+			if selected_attackers.has(card):
+				selected_attackers.erase(card)
+				if card.has_method("show_attack_indicator"): card.show_attack_indicator(false)
+				card.position.y += 20 # Exemplo: move para baixo
+			else:
+				selected_attackers.append(card)
+				if card.has_method("show_attack_indicator"): card.show_attack_indicator(true)
+				card.position.y -= 20 # Exemplo: move para cima
+		return # Impede de arrastar durante esta fase
+	if card.card_slot_card_is_in == null and battle_manager_ref.current_combat_phase == battle_manager_ref.CombatPhase.NONE:
 		start_drag(card)
 		return
-
-	if card.card_slot_card_is_in != null: # Carta no campo
-		if card.card_type != "Criatura" or battle_manager_ref.player_cards_that_attacked_this_turn.has(card):
-			unselect_selected_monster()
-			return
-
-		# É uma criatura que pode atacar/ser selecionada
-		if not battle_manager_ref.opponent_has_creatures(): # Ataque Direto
-			unselect_selected_monster()
-
-		else: # Seleção para atacar criatura
-			if selected_monster == card:
-				unselect_selected_monster()
-			else:
-				select_card_for_battle(card)
-				
-# Seleciona visualmente uma carta para atacar
-func select_card_for_battle(card: Node2D):
-	unselect_selected_monster() # Chama unselect antes de selecionar um novo
-	selected_monster = card
-	selected_monster.position.y -= 20
-	emit_signal("card_selected_for_attack", selected_monster) # Emite sinal
-
-# Remove a seleção visual da carta
-func unselect_selected_monster():
-	if is_instance_valid(selected_monster):
-		var deselected_card = selected_monster
-		selected_monster.position.y += 20
-		selected_monster = null
-		emit_signal("card_deselected_for_attack", deselected_card) # Emite sinal
-
-# --- Funções de Raycast e Auxiliares ---
 
 # Verifica se há uma CARTA DO JOGADOR sob o mouse
 func raycast_check_for_card() -> Node2D:
@@ -246,7 +275,7 @@ func raycast_check_for_card() -> Node2D:
 	var query = PhysicsPointQueryParameters2D.new()
 	query.position = get_global_mouse_position()
 	query.collide_with_areas = true
-	query.collision_mask = Constants.COLLISION_LAYER_CARD | Constants.COLLISION_LAYER_SLOT | Constants.COLLISION_LAYER_DECK | Constants.COLLISION_LAYER_OPPONENT_CARD
+	query.collision_mask = Constants.COLLISION_LAYER_CARD # Apenas cartas do jogador
 	var result = space.intersect_point(query)
 	if !result.is_empty():
 		return get_card_with_highest_z_index(result)
@@ -271,11 +300,11 @@ func get_card_with_highest_z_index(cards: Array) -> Node2D:
 	if cards.is_empty(): return null
 	var highest_card: Node2D = null
 	var highest_z = -INF
-	for item in cards: 
+	for item in cards:
 		var c = item.collider
-		if is_instance_valid(c): 
+		if is_instance_valid(c):
 			var p = c.get_parent()
-			if is_instance_valid(p) and p.z_index > highest_z: 
+			if is_instance_valid(p) and p is Node2D and p.z_index > highest_z:
 				highest_z = p.z_index
 				highest_card = p
 	return highest_card

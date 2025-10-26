@@ -16,25 +16,27 @@ var opponent_peer_id = 0
 
 var deck_1_list: Array[String] = [
 	"Woolsthorpe Manor", "Trinity College",  
-	"Surto da Peste","Surto da Peste",
+	"Rato da Peste","Rato da Peste",
 	"Woolsthorpe Manor", "Trinity College",  
-	"Início da Peste", "Início da Peste",
+	"Rato da Peste","Rato da Peste",
 	"Woolsthorpe Manor", "Trinity College",  
-	"Início da Peste", "Início da Peste",
+	"Rato da Peste","Rato da Peste",
 	"Woolsthorpe Manor", "Trinity College",  
+	"Rato da Peste","Rato da Peste", 
+	
 	
 	
 ]
 
 var deck_2_list: Array[String] = [
 	"Woolsthorpe Manor", "Trinity College",  
-	"Canhão de Newton",
+	"Rato da Peste","Rato da Peste",
 	"Woolsthorpe Manor", "Trinity College",  
-	"Canhão de Newton",
+	"Rato da Peste","Rato da Peste",
 	"Woolsthorpe Manor", "Trinity College",  
-	"Canhão de Newton",
+	"Rato da Peste","Rato da Peste",
 	"Woolsthorpe Manor", "Trinity College",  
-	"Canhão de Newton",
+	"Rato da Peste","Rato da Peste", 
 	
 ]
 
