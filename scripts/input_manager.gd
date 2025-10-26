@@ -16,8 +16,7 @@ var multiplayer_ref
 func _ready():
 	
 	await get_tree().process_frame
-	
-	# 3. NOVO: Encontramos os nós usando caminhos absolutos
+
 	var player_id = get_parent().name 
 	var player_path = "/root/Main/" + player_id
 	

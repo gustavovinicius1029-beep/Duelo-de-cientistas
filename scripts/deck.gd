@@ -56,6 +56,7 @@ func _draw_card_action(card_drawn_name: String):
 	new_card.attack = card_data[0]
 	new_card.base_health = card_data[1]
 	new_card.current_health = card_data[1]
+	new_card.description = card_data[2]
 	new_card.card_type = card_data[3]
 	new_card.energy_cost = card_data[4]
 	new_card.energy_generation = card_data[5]
@@ -66,6 +67,18 @@ func _draw_card_action(card_drawn_name: String):
 
 	var card_image_path = card_database_ref.CARD_IMAGE_PATHS[card_drawn_name]
 	new_card.set_card_image_texture(card_image_path)
+
+
+	new_card.card_data_ref = {
+	"name": card_drawn_name,
+	"attack": new_card.attack,
+	"base_health": new_card.base_health,
+	"current_health": new_card.current_health, # Inclui vida atual
+	"description": new_card.description,
+	"type": new_card.card_type,
+	"cost": new_card.energy_cost,
+	"energy_gen": new_card.energy_generation
+	}
 
 	# Inicia animação e espera terminar antes de emitir o sinal
 	new_card.animation_player.play("card_flip")

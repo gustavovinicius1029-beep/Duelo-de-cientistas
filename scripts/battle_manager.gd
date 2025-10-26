@@ -452,7 +452,10 @@ func _apply_creature_damage(attacking_card: Node2D, defending_card: Node2D) -> D
 		defending_card.attribute2_label.text = str(defending_card.current_health)
 	if attacking_card.has_node("Attribute2"):
 		attacking_card.attribute2_label.text = str(attacking_card.current_health)
-
+	if defending_card.has_method("update_details_popup_if_visible"):
+		defending_card.update_details_popup_if_visible()
+	if attacking_card.has_method("update_details_popup_if_visible"):
+		attacking_card.update_details_popup_if_visible()
 	if attacking_card.current_health <= 0:
 		results["attacker_died"] = true
 	if defending_card.current_health <= 0:
@@ -728,12 +731,24 @@ func rpc_opponent_played_card(card_name: String, card_type: String, slot_index: 
 	card_to_play.attack = card_data[0]
 	card_to_play.base_health = card_data[1]
 	card_to_play.current_health = card_data[1]
+	card_to_play.description = card_data[2]
 	card_to_play.card_type = card_data[3]
 	card_to_play.energy_cost = card_data[4]
 	card_to_play.energy_generation = card_data[5]
 
 	var card_image_path = card_database_ref.CARD_IMAGE_PATHS[card_name]
 	card_to_play.set_card_image_texture(card_image_path)
+	
+	card_to_play.card_data_ref = {
+	"name": card_name,
+	"attack": card_to_play.attack,
+	"base_health": card_to_play.base_health,
+	"current_health": card_to_play.current_health, # Inclui vida atual
+	"description": card_to_play.description,
+	"type": card_to_play.card_type,
+	"cost": card_to_play.energy_cost,
+	"energy_gen": card_to_play.energy_generation
+	}
 
 	target_slot.card_in_slot = true
 	card_to_play.card_slot_card_is_in = target_slot
@@ -1197,10 +1212,26 @@ func summon_token(card_name: String, card_owner: String):
 
 	# Preenche dados
 	var card_data = card_database_ref.CARDS[card_name]
-	new_card.attack = card_data[0]; new_card.base_health = card_data[1]; new_card.current_health = card_data[1]
-	new_card.card_type = card_data[3]; new_card.energy_cost = 0; new_card.energy_generation = card_data[5]
+	new_card.attack = card_data[0]; 
+	new_card.base_health = card_data[1]; 
+	new_card.current_health = card_data[1]
+	new_card.description = card_data[2]
+	new_card.card_type = card_data[3]; 
+	new_card.energy_cost = 0; 
+	new_card.energy_generation = card_data[5]
 	var card_image_path = card_database_ref.CARD_IMAGE_PATHS[card_name]
 	new_card.set_card_image_texture(card_image_path)
+
+	new_card.card_data_ref = {
+	"name": card_name,
+	"attack": new_card.attack,
+	"base_health": new_card.base_health,
+	"current_health": new_card.current_health,
+	"description": new_card.description,
+	"type": new_card.card_type,
+	"cost": new_card.energy_cost,
+	"energy_gen": new_card.energy_generation
+	}
 
 	# Posiciona
 	new_card.global_position = empty_slot.global_position
