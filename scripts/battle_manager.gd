@@ -483,86 +483,91 @@ func confirm_blockers():
 
 # Em scripts/battle_manager.gd
 
+# Em scripts/battle_manager.gd
+
 func resolve_combat_damage():
-	print("Resolvendo Dano de Combate")
+	print(get_parent().name, ": Resolvendo Dano de Combate") # Adiciona ID para depuração
 	set_current_combat_phase(CombatPhase.COMBAT_DAMAGE)
-	player_is_attacking = true # Ativa flag para bloquear outras ações durante animação
-	disable_game_inputs() # Desabilita botões
+	player_is_attacking = true # Flag global para bloquear inputs durante animação
+	disable_game_inputs()
 	var cards_to_destroy: Array = []
-	var attackers_to_process = declared_attackers.duplicate()
+	var local_player_is_attacker = not is_opponent_turn
+	var attacker_cards = declared_attackers.duplicate() # Quem está atacando (lista local)
+	var attacker_battlefield = player_cards_on_battlefield if local_player_is_attacker else opponent_cards_on_battlefield
+	var defender_battlefield = opponent_cards_on_battlefield if local_player_is_attacker else player_cards_on_battlefield
+	var attacker_owner_string = "Jogador" if local_player_is_attacker else "Oponente"
+	var defender_owner_string = "Oponente" if local_player_is_attacker else "Jogador"
+	var processed_attackers: Array = []
 	var current_blockers = declared_blockers.duplicate()
-	var processed_attackers: Array = [] # Para evitar processar duas vezes
-	for attacker in current_blockers: # Itera sobre os atacantes que foram bloqueados
+	for attacker in current_blockers:
 		if not is_instance_valid(attacker): continue
-		processed_attackers.append(attacker) # Marca como processado
+		processed_attackers.append(attacker)
 		var blockers = current_blockers[attacker]
 		if blockers.is_empty() or not is_instance_valid(blockers[0]): continue
-		var primary_blocker = blockers[0] # Pega o primeiro bloqueador para a animação principal
+		var primary_blocker = blockers[0]
 		var original_attacker_pos = attacker.global_position
-		var attack_target_pos = primary_blocker.global_position + Vector2(0, Constants.BATTLE_POS_OFFSET_Y)
+		# Posição alvo é sempre perto do defensor primário
+		var attack_target_pos = primary_blocker.global_position + Vector2(0, Constants.BATTLE_POS_OFFSET_Y if local_player_is_attacker else -Constants.BATTLE_POS_OFFSET_Y)
 		attacker.z_index = 5
 		await animate_card_to_position_and_scale(attacker, attack_target_pos, attacker.scale, 0.15)
-		print("Combate: ", attacker.card_name, " vs ", primary_blocker.card_name)
-		var damage_results = _apply_creature_damage(attacker, primary_blocker) # Isso também toca o VFX
-		if damage_results["attacker_died"]: cards_to_destroy.append({"card": attacker, "owner": "Jogador"})
-		if damage_results["defender_died"]: cards_to_destroy.append({"card": primary_blocker, "owner": "Oponente"}) # Assumindo que bloqueador é do oponente
+		print(get_parent().name, ": Combate: ", attacker.card_name, " vs ", primary_blocker.card_name)
+		var damage_results = _apply_creature_damage(attacker, primary_blocker) # Isso toca o VFX e atualiza health
+		if damage_results["attacker_died"]: cards_to_destroy.append({"card": attacker, "owner": attacker_owner_string})
+		if damage_results["defender_died"]: cards_to_destroy.append({"card": primary_blocker, "owner": defender_owner_string})
 		for i in range(1, blockers.size()):
 			var other_blocker = blockers[i]
 			if is_instance_valid(attacker) and attacker.current_health > 0 and is_instance_valid(other_blocker):
 				attacker.current_health = max(0, attacker.current_health - other_blocker.attack)
 				if attacker.has_node("Attribute2"): attacker.attribute2_label.text = str(attacker.current_health)
 				if attacker.current_health <= 0 and not cards_to_destroy.any(func(d): return d.card == attacker):
-					cards_to_destroy.append({"card": attacker, "owner": "Jogador"})
-		await get_tree().create_timer(0.3).timeout # Pausa curta após hit
+					cards_to_destroy.append({"card": attacker, "owner": attacker_owner_string})
+		await get_tree().create_timer(0.3).timeout # Pausa após hit
 		if is_instance_valid(attacker):
 			await animate_card_to_position_and_scale(attacker, original_attacker_pos, attacker.scale, 0.15)
 			attacker.z_index = -1
-		await get_tree().create_timer(0.1).timeout # Pequena pausa entre combates
-	for attacker in attackers_to_process:
+		await get_tree().create_timer(0.1).timeout
+	for attacker in attacker_cards: # Itera sobre a lista original de atacantes
 		if processed_attackers.has(attacker) or not is_instance_valid(attacker): continue # Pula se já combateu ou inválido
-		if attacker.current_health > 0: # Só ataca se estiver vivo
+		if attacker.current_health > 0:
 			var original_pos = attacker.global_position
-			var target_y = opponent_health_label.global_position.y # Mira no label de vida do oponente
+			var target_y = opponent_health_label.global_position.y if local_player_is_attacker else player_health_label.global_position.y
 			var target_pos = Vector2(attacker.global_position.x, target_y)
 			attacker.z_index = 5
 			await animate_card_to_position_and_scale(attacker, target_pos, attacker.scale, 0.15)
-			print("Dano Direto: ", attacker.card_name)
+			print(get_parent().name, ": Dano Direto: ", attacker.card_name)
 			if NORMAL_ATTACK_VFX:
-				var vfx = NORMAL_ATTACK_VFX.instantiate(); vfx.global_position = target_pos # Posição aproximada do oponente
+				var vfx = NORMAL_ATTACK_VFX.instantiate(); vfx.global_position = target_pos
 				if is_instance_valid(card_manager): 
 					card_manager.add_child(vfx); 
 				else: 
 					get_tree().root.add_child(vfx)
-			_apply_direct_damage(attacker)
-			if not player_cards_that_attacked_this_turn.has(attacker):
+			if local_player_is_attacker:
+				_apply_direct_damage(attacker) # Função aplica a opponent_health
+			else: # Se o jogador local é o defensor, o atacante (remoto) causa dano a NÓS
+				player_health = max(0, player_health - attacker.attack)
+			if local_player_is_attacker and not player_cards_that_attacked_this_turn.has(attacker):
 				player_cards_that_attacked_this_turn.append(attacker)
-			await get_tree().create_timer(0.3).timeout
+			await get_tree().create_timer(0.3).timeout # Pausa
 			await animate_card_to_position_and_scale(attacker, original_pos, attacker.scale, 0.15)
 			attacker.z_index = -1
 			await get_tree().create_timer(0.1).timeout
-
-	# --- Finalização ---
-	update_health_labels()
+	update_health_labels() # Atualiza ambas as vidas em ambos os clientes
 	clear_all_combat_indicators()
 	if is_instance_valid(combat_line_drawer_ref): combat_line_drawer_ref.clear_drawing()
-
-	# Destruir Cartas marcadas
 	if not cards_to_destroy.is_empty():
-		await get_tree().create_timer(0.2).timeout # Pequena pausa antes de destruir
+		await get_tree().create_timer(0.2).timeout
 		for item in cards_to_destroy:
 			if is_instance_valid(item.card):
+				# A função destroy_card já lida com remoção dos arrays corretos
 				await destroy_card(item.card, item.owner)
 				await get_tree().create_timer(0.1).timeout
-
-	# Limpar Estado
 	declared_attackers.clear()
 	declared_blockers.clear()
 	blocker_assignments.clear()
-	player_is_attacking = false # Libera flag de animação
-	enable_game_inputs()      # Reabilita botões (se for nosso turno)
-
-	await get_tree().create_timer(0.3).timeout # Pausa final
-	enter_end_combat_phase()
+	player_is_attacking = false
+	enable_game_inputs() # Reabilita UI
+	await get_tree().create_timer(0.3).timeout
+	enter_end_combat_phase() # Avança para a próxima fase
 
 func handle_blocker_declaration_click(clicked_card: Node2D):
 
