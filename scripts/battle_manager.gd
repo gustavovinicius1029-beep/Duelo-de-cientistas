@@ -184,7 +184,7 @@ func _on_spell_cast_initiated(spell_card: Node2D):
 
 	if spell_name == "Início da Peste":
 		var restrictions = {"type": "Criatura"}
-		setup_targeting_state(spell_card, 1, restrictions, false)
+		setup_targeting_state(spell_card, 1, restrictions, true)
 	elif spell_name == "Surto da Peste":
 		var restrictions = {"type": "Criatura", "max_health": 2}
 		setup_targeting_state(spell_card, 2, restrictions, true)
@@ -952,7 +952,8 @@ func setup_targeting_state(spell_card: Node2D, max_targets: int, restrictions: D
 	current_spell_target_restrictions = restrictions
 	current_spell_target_count = 0
 	current_spell_targets.clear()
-	if is_instance_valid(confirm_action_button): confirm_action_button.visible = needs_confirmation
+	if is_instance_valid(confirm_action_button): 
+		confirm_action_button.visible = needs_confirmation
 
 func reset_targeting_state():
 	player_is_targeting_spell = false

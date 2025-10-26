@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3 uid="uid://tbe00hjr5q63"]
+[gd_scene load_steps=12 format=3 uid="uid://tbe00hjr5q63"]
 
 [ext_resource type="Script" uid="uid://bfun1cur26iea" path="res://scripts/battle_manager.gd" id="1_8ekmn"]
 [ext_resource type="Script" uid="uid://7ikv67lbs1gk" path="res://scripts/CardManager.gd" id="2_tixef"]
@@ -9,6 +9,7 @@
 [ext_resource type="PackedScene" uid="uid://dvuc35rh86bx5" path="res://scenes/card_slot.tscn" id="7_qbk65"]
 [ext_resource type="Script" uid="uid://c3fe3x00fn2qk" path="res://scripts/land_card_slot.gd" id="8_8fuj6"]
 [ext_resource type="Texture2D" uid="uid://df88e3235ytw0" path="res://assets/CardSlot.png" id="9_pnh2f"]
+[ext_resource type="Script" uid="uid://cntwrvt56vwxd" path="res://scripts/vfx/CombatLineDrawer.gd" id="10_xhjue"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_buj2l"]
 size = Vector2(148, 208)
@@ -165,3 +166,6 @@ offset_bottom = 616.0
 text = "Confirmar Alvos"
 
 [node name="BattleTimer" type="Timer" parent="."]
+
+[node name="CombatLineDrawer" type="Node2D" parent="."]
+script = ExtResource("10_xhjue")
