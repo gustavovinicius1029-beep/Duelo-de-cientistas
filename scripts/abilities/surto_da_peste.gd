@@ -4,7 +4,6 @@ extends Node
 func trigger_ability(battle_manager, target_cards: Array, spell_card, caster_owner: String):
 	print("HABILIDADE ATIVADA: Surto da Peste!")
 	
-	# Desativa botões enquanto o feitiço resolve
 	battle_manager.disable_game_inputs()
 
 	if target_cards.is_empty():
@@ -23,14 +22,15 @@ func trigger_ability(battle_manager, target_cards: Array, spell_card, caster_own
 					
 				if card_owner:
 					await battle_manager.destroy_card(target, card_owner)
-					await battle_manager.wait_seconds(0.3) # Pausa entre destruições
+					await battle_manager.get_tree().create_timer(0.3).timeout
 				else:
 					print("ERRO: Não foi possível encontrar o dono de ", target.name)
 
 	# Espera e destrói o feitiço
-	await battle_manager.wait_seconds(0.5)
+	await battle_manager.get_tree().create_timer(0.5).timeout
 	if is_instance_valid(spell_card):
 		await battle_manager.destroy_card(spell_card, caster_owner)
 		
 	# Reativa os botões
-	battle_manager.enable_game_inputs()
+	battle_manager.phase_button.disabled = false
+	battle_manager.confirm_action_button.disabled = true

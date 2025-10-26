@@ -1,12 +1,10 @@
+
 func trigger_ability(battle_manager, target_cards: Array, spell_card, caster_owner: String):
 # --- FIM DA ALTERAÇÃO ---
 	print("HABILIDADE ATIVADA: Início da Peste!")
 	
-	battle_manager.phase_button.disabled = true
-	battle_manager.phase_button.visible = false
+	battle_manager.disable_game_inputs()
 
-	# --- INÍCIO DA ALTERAÇÃO ---
-	# 2. Pega o primeiro (e único) alvo do array
 	var target_card = null
 	if not target_cards.is_empty():
 		target_card = target_cards[0] 
@@ -64,4 +62,4 @@ func trigger_ability(battle_manager, target_cards: Array, spell_card, caster_own
 
 	# 6. Reativa o botão de turno (sem alteração)
 	battle_manager.phase_button.disabled = false
-	battle_manager.phase_button.visible = true
+	battle_manager.confirm_action_button.disabled = true

@@ -151,21 +151,26 @@ func finish_drag():
 			# Remove da mão visualmente
 			player_hand_ref.remove_card_from_hand(card_being_dragged, Constants.DEFAULT_CARD_MOVE_SPEED)
 
+			if card_being_dragged.card_type == "Criatura": # Certifique-se que é uma criatura
+				battle_manager_ref.player_current_energy -= card_being_dragged.energy_cost # Deduz a energia
+				battle_manager_ref.update_energy_labels() # Atualiza o label imediatamente
+			# --- FIM DA CORREÇÃO ---
+
 			# Emite sinal indicando que a carta foi jogada com sucesso
-			emit_signal("card_played", original_card)
+			emit_signal("card_played", original_card) #
 
 			# Marca trava de turno no BattleManager (se for terreno)
-			if card_being_dragged.card_type == "Terreno":
-				battle_manager_ref.player_played_land_this_turn = true
+			if card_being_dragged.card_type == "Terreno": #
+				battle_manager_ref.player_played_land_this_turn = true #
 		else:
 			# Slot inválido ou ocupado, retorna para a mão
-			player_hand_ref.add_card_to_hand(card_being_dragged, Constants.DEFAULT_CARD_MOVE_SPEED)
+			player_hand_ref.add_card_to_hand(card_being_dragged, Constants.DEFAULT_CARD_MOVE_SPEED) #
 
 	# Emite o sinal de fim de drag (independente de sucesso ou falha ao jogar no slot)
 	if is_instance_valid(original_card):
-		emit_signal("card_drag_finished", original_card, final_slot)
+		emit_signal("card_drag_finished", original_card, final_slot) #
 
-	card_being_dragged = null # Garante que o estado de drag seja resetado
+	card_being_dragged = null
 	
 # Gerencia o efeito visual de hover
 func update_hover_state():
@@ -247,9 +252,9 @@ func reset_turn_limits():
 # Em scripts/CardManager.gd
 
 func _on_player_card_clicked(card: Node2D):
-	if is_instance_valid(battle_manager_ref) and battle_manager_ref.player_is_targeting_spell: # Adicionada verificação is_instance_valid
-		battle_manager_ref.player_card_selected_for_spell(card)
-		return
+	#if is_instance_valid(battle_manager_ref) and battle_manager_ref.player_is_targeting_spell: # Adicionada verificação is_instance_valid
+		#battle_manager_ref.player_card_selected_for_spell(card)
+		#return
 	if not is_instance_valid(battle_manager_ref) or battle_manager_ref.is_opponent_turn or battle_manager_ref.player_is_attacking:
 		return
 	if battle_manager_ref.current_combat_phase == battle_manager_ref.CombatPhase.DECLARE_ATTACKERS:

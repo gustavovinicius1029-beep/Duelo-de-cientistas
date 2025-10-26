@@ -57,6 +57,7 @@ var player_is_attacking: bool = false # Flag para animações de ataque/dano
 var player_is_targeting_spell: bool = false
 var spell_being_cast: Node2D = null
 var current_spell_max_targets: int = 0
+var current_spell_min_targets: int = 0
 var current_spell_target_count: int = 0
 var current_spell_targets: Array = []
 var current_spell_target_restrictions: Dictionary = {}
@@ -184,10 +185,10 @@ func _on_spell_cast_initiated(spell_card: Node2D):
 
 	if spell_name == "Início da Peste":
 		var restrictions = {"type": "Criatura"}
-		setup_targeting_state(spell_card, 1, restrictions, true)
+		setup_targeting_state(spell_card, 0,1, restrictions, true)
 	elif spell_name == "Surto da Peste":
 		var restrictions = {"type": "Criatura", "max_health": 2}
-		setup_targeting_state(spell_card, 2, restrictions, true)
+		setup_targeting_state(spell_card,0, 2, restrictions, true)
 	elif spell_name == "A Peste":
 		var opponent_bm = get_opponent_battle_manager()
 		var opponent_peer_id = get_opponent_peer_id()
@@ -264,6 +265,44 @@ func _on_confirm_action_button_pressed():
 		print("Ação bloqueada: Turno do oponente ou atacando.")
 		return
 	match current_combat_phase:
+		
+		CombatPhase.NONE: # Adicione este caso para feitiços
+			if not is_opponent_turn and player_is_targeting_spell and is_instance_valid(spell_being_cast):
+				  # Garante que o número correto de alvos foi selecionado
+				if current_spell_target_count < current_spell_min_targets:
+					print("Ainda faltam alvos para selecionar.")
+					return # Não faz nada se faltarem alvos
+
+				if spell_being_cast.ability_script != null:
+					var spell_name = spell_being_cast.card_name
+					var target_data_array = []
+					for target in current_spell_targets:
+						var target_owner = ""
+						var target_slot_index = -1
+						if player_cards_on_battlefield.has(target):
+							target_owner = "Jogador"
+							target_slot_index = player_creature_slots_ref.find(target.card_slot_card_is_in)
+						elif opponent_cards_on_battlefield.has(target):
+							target_owner = "Oponente"
+							target_slot_index = opponent_creature_slots_ref.find(target.card_slot_card_is_in)
+
+						if target_slot_index != -1:
+							target_data_array.append({"owner": target_owner, "slot_index": target_slot_index})
+
+					var opponent_bm = get_opponent_battle_manager()
+					var opponent_peer_id = get_opponent_peer_id()
+					if is_instance_valid(opponent_bm) and opponent_peer_id != 0:
+						  # Notifica o oponente sobre o feitiço com alvos
+						opponent_bm.rpc_id(opponent_peer_id, "rpc_opponent_cast_targeted_spell", spell_name, target_data_array) #
+
+					 # Executa a habilidade localmente
+					await spell_being_cast.ability_script.trigger_ability(self, current_spell_targets, spell_being_cast, "Jogador") #
+				else:
+					printerr("ERRO: Feitiço sem ability_script!")
+					enable_game_inputs() # Reabilita inputs em caso de erro
+
+				reset_targeting_state() # Limpa o estado de mira
+		
 		CombatPhase.DECLARE_ATTACKERS:
 			if not is_opponent_turn:
 				confirm_attackers()
@@ -271,6 +310,7 @@ func _on_confirm_action_button_pressed():
 			if is_opponent_turn:
 				confirm_blockers()
 			if not is_opponent_turn and player_is_targeting_spell and is_instance_valid(spell_being_cast):
+				print("pode jogar ofeitiço")
 				if spell_being_cast.ability_script != null:
 					var spell_name = spell_being_cast.card_name
 					var target_data_array = []
@@ -299,6 +339,7 @@ func _on_confirm_action_button_pressed():
 
 				reset_targeting_state()
 			else:
+				print("falhou")
 				reset_targeting_state()
 
 @rpc("any_peer", "call_local")
@@ -767,7 +808,7 @@ func rpc_opponent_cast_targeted_spell(spell_name: String, target_data_array: Arr
 
 	var ability_script = load(ability_path).new()
 	await ability_script.trigger_ability(self, local_target_nodes, fake_spell_card, "Oponente")
-
+	
 @rpc("any_peer")
 func rpc_opponent_cast_global_spell(spell_name: String):
 	if not card_database_ref.CARDS.has(spell_name): printerr("ERRO RPC global spell: Feitiço desconhecido: ", spell_name); return
@@ -945,10 +986,12 @@ func attack(attacking_card: Node2D, defending_card: Node2D, attacker: String):
 
 # --- Funções de Targeting de Feitiços ---
 
-func setup_targeting_state(spell_card: Node2D, max_targets: int, restrictions: Dictionary, needs_confirmation: bool):
+func setup_targeting_state(spell_card: Node2D,min_targets: int, max_targets: int, restrictions: Dictionary, needs_confirmation: bool):
 	player_is_targeting_spell = true
+	update_ui_for_phase()
 	spell_being_cast = spell_card
 	current_spell_max_targets = max_targets
+	current_spell_min_targets = min_targets
 	current_spell_target_restrictions = restrictions
 	current_spell_target_count = 0
 	current_spell_targets.clear()
@@ -959,12 +1002,14 @@ func reset_targeting_state():
 	player_is_targeting_spell = false
 	spell_being_cast = null
 	current_spell_max_targets = 0
+	current_spell_min_targets = 0
 	current_spell_target_count = 0
 	current_spell_target_restrictions.clear()
 	if is_instance_valid(confirm_action_button): confirm_action_button.visible = false
 	for card in current_spell_targets:
 		if is_instance_valid(card): card.modulate = Color(1, 1, 1)
 	current_spell_targets.clear()
+	update_ui_for_phase()
 
 func handle_spell_target_selection(target_card: Node2D):
 	if current_spell_targets.has(target_card):
@@ -973,11 +1018,14 @@ func handle_spell_target_selection(target_card: Node2D):
 		target_card.modulate = Color(1, 1, 1)
 		return
 
-	if current_spell_target_count >= current_spell_max_targets: return
+	if current_spell_target_count >= current_spell_max_targets: 
+		return
 
 	var valid_target = true
+	
 	if current_spell_target_restrictions.has("type"):
 		if not (target_card.card_type == current_spell_target_restrictions.type): valid_target = false
+	
 	if valid_target and current_spell_target_restrictions.has("max_health"):
 		if not (target_card.current_health <= current_spell_target_restrictions.max_health): valid_target = false
 
@@ -985,15 +1033,8 @@ func handle_spell_target_selection(target_card: Node2D):
 		current_spell_targets.append(target_card)
 		current_spell_target_count += 1
 		target_card.modulate = Color(1, 0.5, 0.5)
-
-		# Dispara feitiço de alvo único imediatamente
-		var needs_confirmation = is_instance_valid(confirm_action_button) and confirm_action_button.visible
-		if not needs_confirmation and current_spell_target_count == current_spell_max_targets:
-			if is_instance_valid(spell_being_cast) and spell_being_cast.ability_script != null:
-				await spell_being_cast.ability_script.trigger_ability(self, [target_card], spell_being_cast, "Jogador")
-			else:
-				printerr("ERRO: Feitiço de alvo único falhou.")
-			reset_targeting_state()
+		if is_instance_valid(confirm_action_button) and confirm_action_button.visible:
+			confirm_action_button.disabled = current_spell_target_count <= current_spell_min_targets
 
 # --- Funções de UI e Auxiliares ---
 
@@ -1006,8 +1047,10 @@ func update_energy_labels():
 	if is_instance_valid(opponent_energy_label): opponent_energy_label.text = "E: " + str(opponent_current_energy) + "/" + str(opponent_lands_in_play)
 
 func disable_game_inputs():
-	if is_instance_valid(phase_button): phase_button.disabled = true
-	if is_instance_valid(confirm_action_button): confirm_action_button.disabled = true
+	if is_instance_valid(phase_button): 
+		phase_button.disabled = true
+	if is_instance_valid(confirm_action_button): 
+		confirm_action_button.disabled = true
 	# Considerar desabilitar input_manager se necessário
 
 func enable_game_inputs():
@@ -1016,21 +1059,49 @@ func enable_game_inputs():
 		update_ui_for_phase() # Deixa a função de UI decidir o estado dos botões
 
 func update_ui_for_phase():
-	if not is_instance_valid(phase_button) or not is_instance_valid(confirm_action_button): return
+	
+	if not is_instance_valid(phase_button) or not is_instance_valid(confirm_action_button): 
+		return
 
 	if is_opponent_turn:
-		phase_button.visible = false; confirm_action_button.visible = false; return
+		phase_button.visible = false
+		confirm_action_button.visible = false
+		return
 
-	confirm_action_button.visible = false; phase_button.visible = true; phase_button.disabled = false
+	confirm_action_button.visible = false
+	phase_button.visible = true
+	phase_button.disabled = false
 
 	match current_combat_phase:
-		CombatPhase.NONE: phase_button.text = "Iniciar Combate"; confirm_action_button.visible = player_is_targeting_spell
-		CombatPhase.BEGIN_COMBAT: phase_button.text = "Declarar Atacantes"
-		CombatPhase.DECLARE_ATTACKERS: phase_button.disabled = true; confirm_action_button.text = "Confirmar Atacantes"; confirm_action_button.visible = true; confirm_action_button.disabled = false
-		CombatPhase.DECLARE_BLOCKERS: phase_button.text = "Esperando Bloqueio..."; phase_button.disabled = true # Defensor usa confirm
-		CombatPhase.COMBAT_DAMAGE: phase_button.text = "Resolvendo Dano..."; phase_button.disabled = true
-		CombatPhase.END_COMBAT: phase_button.text = "Finalizar Turno"
-
+		CombatPhase.NONE:
+			phase_button.text = "Iniciar Combate"
+			confirm_action_button.visible = player_is_targeting_spell # Mostra se estiver mirando
+			if player_is_targeting_spell: # Se estiver mirando...
+				print("pde lançar sem medo")
+				confirm_action_button.text = "Confirmar alvos"
+				phase_button.disabled = true
+				confirm_action_button.disabled = false
+			else:
+				phase_button.disabled = false
+				
+		CombatPhase.BEGIN_COMBAT:
+			phase_button.text = "Declarar Atacantes"
+		CombatPhase.DECLARE_ATTACKERS:
+			phase_button.disabled = true
+			confirm_action_button.text = "Confirmar Atacantes" #
+			confirm_action_button.visible = true
+			confirm_action_button.disabled = false
+		CombatPhase.DECLARE_BLOCKERS: # Turno do Jogador, esperando oponente bloquear
+			phase_button.text = "Esperando Bloqueio..."
+			phase_button.disabled = true
+			# O botão de confirmação NÃO deve ser visível para o atacante nesta fase
+			confirm_action_button.visible = false
+		CombatPhase.COMBAT_DAMAGE:
+			phase_button.text = "Resolvendo Dano..."
+			phase_button.disabled = true #
+		CombatPhase.END_COMBAT:
+			phase_button.text = "Finalizar Turno" #
+	
 func update_ui_for_phase_defender():
 	if not is_instance_valid(phase_button) or not is_instance_valid(confirm_action_button): return
 	phase_button.visible = false
