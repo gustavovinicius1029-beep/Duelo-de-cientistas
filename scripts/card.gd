@@ -32,21 +32,27 @@ var player_hand_ref
 var opponent_hand_ref
 
 func _ready() -> void:
-	
 	await get_tree().process_frame
-	var player_id = get_parent().name 
-	#var player_path = "/root/Main/" + player_id
-	var opponent_id = "2" if player_id == "1" else "1"
-	var opponent_path = "/root/Main/" + opponent_id
-	opponent_hand_ref = get_node(opponent_path + "/OpponentHand")
-	player_hand_ref = get_node(opponent_path + "/PlayerHand")
+	var field_node = get_parent().get_parent()
+	if not is_instance_valid(field_node) or not (field_node.name == "1" or field_node.name == "2"):
+		printerr(self.name + " Error in _ready(): Could not determine player field node. Path attempted: " + str(get_path()))
+		# Attempting alternative path assuming CardManager might be under Main/[1 or 2] directly
+		field_node = get_parent()
+		if not is_instance_valid(field_node) or not (field_node.name == "1" or field_node.name == "2"):
+			printerr(self.name + " Error in _ready(): Still could not determine player field node. Final path attempted: " + str(get_path()))
+			return # Cannot proceed without finding the field node
+	var my_field_id = field_node.name
+	var opponent_field_id = "2" if my_field_id == "1" else "1"
+	var my_field_path = "/root/Main/" + my_field_id
+	var opponent_field_path = "/root/Main/" + opponent_field_id
+	player_hand_ref = get_node_or_null(my_field_path + "/PlayerHand")
+	opponent_hand_ref = get_node_or_null(opponent_field_path + "/OpponentHand")
+	if not is_instance_valid(player_hand_ref):
+		printerr(self.name + " Error in _ready(): PlayerHand node not found at " + my_field_path + "/PlayerHand")
+	if not is_instance_valid(opponent_hand_ref):
+		printerr(self.name + " Error in _ready(): OpponentHand node not found at " + opponent_field_path + "/OpponentHand")
 	if hover_timer:
 		hover_timer.timeout.connect(_on_hover_timer_timeout)
-	var area = $Area2D
-	if area and not area.is_connected("mouse_entered", Callable(self, "_on_area_2d_mouse_entered")):
-		area.mouse_entered.connect(_on_area_2d_mouse_entered)
-	if area and not area.is_connected("mouse_exited", Callable(self, "_on_area_2d_mouse_exited")):
-		area.mouse_exited.connect(_on_area_2d_mouse_exited)
 
 # Função atualizada para mostrar/esconder labels
 func setup_card_display():
@@ -101,17 +107,6 @@ func show_block_indicator(visible: bool) -> void:
 func hide_combat_indicators() -> void:
 	show_attack_indicator(false)
 	show_block_indicator(false)
-
-func _on_area_2d_mouse_entered():
-	if card_slot_card_is_in != null or player_hand_ref.get_parent() or opponent_hand_ref.get_parent():
-		if hover_timer:
-			hover_timer.start()
-
-func _on_area_2d_mouse_exited():
-	if hover_timer:
-		hover_timer.stop()
-	if details_popup:
-		details_popup.hide_popup()
 
 func _on_hover_timer_timeout():
 	if details_popup:

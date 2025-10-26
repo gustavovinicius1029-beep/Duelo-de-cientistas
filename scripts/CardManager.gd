@@ -183,7 +183,6 @@ func update_hover_state():
 
 	# Verifica qual nó (Carta, Deck, etc.) está sob o mouse
 	var node_under_mouse = raycast_check_for_interactable() # Usaremos uma função auxiliar mais robusta
-
 	# Se não há nada interativo sob o mouse
 	if not is_instance_valid(node_under_mouse):
 		if is_instance_valid(card_being_hovered):
@@ -227,24 +226,33 @@ func raycast_check_for_interactable() -> Node2D:
 	return null
 
 func highlight_card(card: Node2D, hovered: bool):
-	if not is_instance_valid(card): return
-	# VERIFICA NOVAMENTE se é uma carta antes de acessar propriedades específicas de carta
-	if not card.has_method("get_defeated"): return
-	if card.get_defeated(): return
-	#if card_is_in.opponent_hand:
-		#return
-
-	# Acessa card_slot_card_is_in apenas se tiver certeza que é uma carta válida
-	if card.card_slot_card_is_in != null and hovered: return # Não destaca cartas já no slot
-
+	if not is_instance_valid(card): 
+		return
+	if not card.has_method("get_defeated") or not card.has_node("HoverTimer") or not card.has_node("CardDetailsPopup"):
+		return
+	if card.get_defeated(): 
+		return # Não faz nada se a carta está derrotada
+	var is_in_slot = card.card_slot_card_is_in != null
+	var is_in_hand = (is_instance_valid(card.player_hand_ref) and card.player_hand_ref == card.get_parent()) or (is_instance_valid(card.opponent_hand_ref) and card.opponent_hand_ref == card.get_parent())
+	if not is_in_slot and not is_in_hand:
+		return   
+	if is_in_slot and hovered:
+		return
 	if hovered:
-		card.scale = Constants.CARD_BIGGER_SCALE
-		card.z_index = 2 # Traz para frente
+		if not is_in_slot: 
+			card.scale = Constants.CARD_BIGGER_SCALE
+			card.z_index = 5 
+		if card.hover_timer: 
+			card.hover_timer.start()
 	else:
-		card.scale = Constants.DEFAULT_CARD_SCALE
-		card.z_index = 1 # Retorna ao normal (ou 0 se preferir)
+		if card.hover_timer:
+			card.hover_timer.stop()
+		if card.details_popup: 
+			card.details_popup.hide_popup()
+		if not is_in_slot:
+			card.scale = Constants.DEFAULT_CARD_SCALE
+			card.z_index = 1
 
-# Reseta apenas a seleção visual
 func reset_turn_limits():
 	clear_attacker_selection()
 
