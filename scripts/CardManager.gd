@@ -226,32 +226,27 @@ func raycast_check_for_interactable() -> Node2D:
 	return null
 
 func highlight_card(card: Node2D, hovered: bool):
-	if not is_instance_valid(card): 
-		return
+	if not is_instance_valid(card): return
 	if not card.has_method("get_defeated") or not card.has_node("HoverTimer") or not card.has_node("CardDetailsPopup"):
 		return
-	if card.get_defeated(): 
-		return # Não faz nada se a carta está derrotada
+	if card.get_defeated(): return # Não faz nada se derrotada
 	var is_in_slot = card.card_slot_card_is_in != null
-	var is_in_hand = (is_instance_valid(card.player_hand_ref) and card.player_hand_ref == card.get_parent()) or (is_instance_valid(card.opponent_hand_ref) and card.opponent_hand_ref == card.get_parent())
-	if not is_in_slot and not is_in_hand:
-		return   
-	if is_in_slot and hovered:
-		return
 	if hovered:
-		if not is_in_slot: 
+		if not is_in_slot:
 			card.scale = Constants.CARD_BIGGER_SCALE
-			card.z_index = 5 
-		if card.hover_timer: 
+			card.z_index = 5 # Traz BEM para frente para garantir visibilidade
+		else:
+			pass
+		if is_instance_valid(card.hover_timer):
 			card.hover_timer.start()
-	else:
-		if card.hover_timer:
+	else: 
+		if is_instance_valid(card.hover_timer):
 			card.hover_timer.stop()
-		if card.details_popup: 
+		if is_instance_valid(card.details_popup):
 			card.details_popup.hide_popup()
 		if not is_in_slot:
 			card.scale = Constants.DEFAULT_CARD_SCALE
-			card.z_index = 1
+			card.z_index = 1 # Retorna ao normal
 
 func reset_turn_limits():
 	clear_attacker_selection()

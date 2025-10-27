@@ -14,7 +14,7 @@ var hand_position: Vector2
 @onready var hover_timer = $HoverTimer
 @onready var details_popup = $CardDetailsPopup
 
-const HOVER_POPUP_OFFSET = Vector2(80, -120)
+const HOVER_POPUP_OFFSET = Vector2(70, -50)
 var card_data_ref: Dictionary = {} # Para guardar todos os dados da carta
 var description: String = ""
 var card_type: String = ""
