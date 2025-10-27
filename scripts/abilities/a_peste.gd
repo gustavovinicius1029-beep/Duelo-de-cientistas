@@ -19,15 +19,14 @@ func trigger_ability(battle_manager, spell_card, caster_owner: String):
 		if is_instance_valid(card) and card.card_type == "Criatura":
 			await battle_manager.destroy_card(card, "Jogador")
 			destroyed_creature_count += 1
-			await battle_manager.wait_seconds(0.1) # Pausa dramática
+			await battle_manager.get_tree().create_timer(0.1).timeout # Pausa dramática
 
 	# 4. Destrói criaturas do oponente
 	for card in opponent_creatures:
 		if is_instance_valid(card) and card.card_type == "Criatura":
 			await battle_manager.destroy_card(card, "Oponente")
 			destroyed_creature_count += 1
-			await battle_manager.wait_seconds(0.1) # Pausa dramática
-	
+			await battle_manager.get_tree().create_timer(0.1).timeout
 	print("Total de criaturas destruídas pela Peste: ", destroyed_creature_count)
 
 	# 5. Invoca Ratos da Peste
@@ -38,10 +37,10 @@ func trigger_ability(battle_manager, spell_card, caster_owner: String):
 			# 2. Usa 'caster_owner' para invocar o token
 			await battle_manager.summon_token("Rato da Peste", caster_owner)
 			# --- FIM DA ALTERAÇÃO ---
-			await battle_manager.wait_seconds(0.2)
+			await battle_manager.get_tree().create_timer(0.2).timeout
 	
 	# 6. Destrói a própria carta de feitiço
-	await battle_manager.wait_seconds(0.5)
+	await battle_manager.get_tree().create_timer(0.5).timeout
 	if is_instance_valid(spell_card):
 		await battle_manager.destroy_card(spell_card, caster_owner)
 		

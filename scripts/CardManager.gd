@@ -255,9 +255,10 @@ func reset_turn_limits():
 # Em scripts/CardManager.gd
 
 func _on_player_card_clicked(card: Node2D):
-	#if is_instance_valid(battle_manager_ref) and battle_manager_ref.player_is_targeting_spell: # Adicionada verificação is_instance_valid
-		#battle_manager_ref.player_card_selected_for_spell(card)
-		#return
+	var multiplayer_node = get_node_or_null("/root/Main") # Caminho para o nó com multiplayer.gd
+	if not is_instance_valid(multiplayer_node) or not multiplayer_node.game_started:
+		print("Aguardando início do jogo (Mulligan). Clique na carta bloqueado.")
+		return
 	if not is_instance_valid(battle_manager_ref) or battle_manager_ref.is_opponent_turn or battle_manager_ref.player_is_attacking:
 		return
 	if battle_manager_ref.current_combat_phase == battle_manager_ref.CombatPhase.DECLARE_ATTACKERS:

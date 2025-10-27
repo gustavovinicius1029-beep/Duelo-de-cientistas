@@ -34,6 +34,10 @@ func _input(event):
 			emit_signal("left_mouse_button_released")
 
 func raycast_at_cursor():
+	var multiplayer_node = get_node_or_null("/root/Main") # Caminho para o nó com multiplayer.gd
+	if not is_instance_valid(multiplayer_node) or not multiplayer_node.game_started:
+		print("Aguardando início do jogo (Mulligan). Clique na carta bloqueado.")
+		return
 	var space_state = get_world_2d().direct_space_state
 	var query = PhysicsPointQueryParameters2D.new()
 	query.position = get_global_mouse_position()

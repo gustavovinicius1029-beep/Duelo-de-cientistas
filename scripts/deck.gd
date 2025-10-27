@@ -28,20 +28,48 @@ func _ready():
 	player_hand_ref = get_node(player_path + "/PlayerHand")
 	card_manager_ref = get_node(player_path + "/CardManager")
 	
-
 @rpc("any_peer", "call_local")
 func set_deck_list(list: Array):
 	synced_deck_list = list
-	print("Deck do jogador sincronizado. Contagem: ", synced_deck_list.size())
+	print("Deck do jogador ", get_parent().name, " sincronizado. Contagem: ", synced_deck_list.size())
 	update_card_count_label()
 	
 @rpc("any_peer", "call_local")
 func draw_card():
-	print("RPC: Recebida ordem para comprar carta (Jogador).")
+	print("RPC: Recebida ordem para comprar carta (Jogador ", get_parent().name, ").")
 	if synced_deck_list.is_empty():
+		print("Deck vazio, não pode comprar.")
 		return
 	var card_drawn_name = synced_deck_list.pop_front()
 	_draw_card_action(card_drawn_name)
+
+@rpc("any_peer", "call_local")
+func rpc_perform_mulligan_draw(returned_card_names: Array):
+	print("RPC: Jogador ", get_parent().name, " realizando Mulligan.") # ID adicionado
+	if not is_instance_valid(player_hand_ref):
+		printerr("Erro Mulligan Draw: Referência inválida para PlayerHand.")
+		return
+	for card_name in returned_card_names:
+		synced_deck_list.append(card_name)
+	print("Cartas devolvidas adicionadas ao fundo. Tamanho do deck: ", synced_deck_list.size())
+	synced_deck_list.shuffle()
+	print("Deck re-embaralhado.")
+	# 3. Limpa a mão visualmente (os nós das cartas já foram removidos por return_hand_to_deck)
+	# player_hand_ref.clear_hand_visuals() # Uma nova função talvez seja necessária em player_hand se return_hand_to_deck não limpar tudo
+	var hand_size = returned_card_names.size() # Compra o mesmo número que devolveu
+	print("Comprando nova mão de ", hand_size, " cartas.")
+	if not is_multiplayer_authority():
+		printerr("ERRO FATAL: Tentando executar rpc_perform_mulligan_draw sem autoridade!")
+		return
+	for i in range(hand_size):
+		if synced_deck_list.is_empty():
+			print("Deck acabou durante o Mulligan draw.")
+			break
+		var card_drawn_name = synced_deck_list.pop_front()
+		_draw_card_action(card_drawn_name)
+		await get_tree().create_timer(0.05).timeout
+	print("Mulligan draw completo. Tamanho final do deck: ", synced_deck_list.size())
+	update_card_count_label()
 
 func _draw_card_action(card_drawn_name: String):
 	var new_card = card_scene.instantiate()
