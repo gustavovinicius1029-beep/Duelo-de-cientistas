@@ -366,6 +366,7 @@ one_shot = true
 
 [node name="CardDetailsPopup" parent="." instance=ExtResource("7_hy522")]
 visible = false
+z_index = 5
 position = Vector2(33.333332, 38.333332)
 
 [connection signal="mouse_entered" from="Area2D" to="." method="_on_area_2d_mouse_entered"]

@@ -107,13 +107,14 @@ z_index = 1
 offset_left = 69.0
 offset_top = -171.0
 offset_right = 289.0
-offset_bottom = 49.0
+offset_bottom = 19.0
 size_flags_vertical = 3
 mouse_filter = 2
 theme_override_font_sizes/normal_font_size = 16
 theme_override_font_sizes/bold_font_size = 24
 text = "Destrua todas as criaturas. Para cada criatura que foi destruída desta forma, invoque um Rato da Peste 1/1. Só pode ser usada se, um Rato da Peste   ou marcador Peste, estiver em campo.aaaaaaaaaaaaaaaa"
 horizontal_alignment = 1
+vertical_alignment = 1
 metadata/_edit_use_anchors_ = true
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
