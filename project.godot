@@ -37,3 +37,7 @@ opponent_slots_container=""
 2d_physics/layer_1="Card"
 2d_physics/layer_2="Slot"
 2d_physics/layer_3="Deck"
+
+[rendering]
+
+textures/vram_compression/import_etc2_astc=true
