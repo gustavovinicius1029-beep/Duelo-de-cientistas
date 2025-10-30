@@ -59,7 +59,7 @@ func _on_card_left_hand(card: Node2D):
 func _on_card_drag_finished(card: Node2D, target_slot: Node2D):
 	if not is_instance_valid(target_slot) and card.card_type != "feitiço" and cards_in_hand.has(card):
 		animate_card_to_position(card, card.hand_position, Constants.DEFAULT_CARD_MOVE_SPEED)
-	elif not is_instance_valid(target_slot) and card.card_type != "feitiço" and not cards_in_hand.has(card):
+	elif not is_instance_valid(target_slot) and card.card_type != "feitiço" and card.card_type != "Magia Instantânea" and not cards_in_hand.has(card):
 		print("Aviso _on_card_drag_finished: Carta ", card.card_name, " retornando para a mão, mas não estava no array cards_in_hand.")
 		add_card_to_hand(card, Constants.DEFAULT_CARD_MOVE_SPEED)
 		

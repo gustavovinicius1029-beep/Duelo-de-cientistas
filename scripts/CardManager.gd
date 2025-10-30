@@ -311,9 +311,11 @@ func try_play_spell_no_slot(card: Node2D) -> bool:
 	# --- FIM DA LÓGICA ---
 
 	# Se passou, gasta energia e emite o sinal
+	print("try_play_spell_no_slot vai emitir o sinal")
 	bm.player_current_energy -= card.energy_cost
 	bm.update_energy_labels()
 	emit_signal("spell_cast_initiated", card)
+	print("try_play_spell_no_slot emitiu o sinal")
 	return true
 	
 func toggle_attacker(card: Node2D):

@@ -24,13 +24,12 @@ var opponent_peer_id = 0
 
 var deck_1_list: Array[String] = [
 	
-	
-	"Rato da Peste","Membro da Royal Society","Guardião da Casa da Moeda",
-	"Disco de Newton", "Canhão de Newton","Rato da Peste",
+	"Maçã Caindo","Maçã Caindo","Maçã Caindo","Maçã Caindo","Maçã Caindo","Maçã Caindo",
+	"Trinity College","Trinity College","Trinity College","Trinity College",
+	"Trinity College","Trinity College","Trinity College","Trinity College",
+	"Maçã Caindo","Maçã Caindo","Maçã Caindo","Maçã Caindo","Maçã Caindo",
 	"Membro da Royal Society","Guardião da Casa da Moeda","Disco de Newton", 
 	"Canhão de Newton",
-	"Trinity College","Trinity College","Trinity College","Trinity College","Trinity College",
-	"Trinity College","Woolsthorpe Manor","Woolsthorpe Manor","Woolsthorpe Manor","Woolsthorpe Manor","Woolsthorpe Manor","Woolsthorpe Manor","Início da Peste","Início da Peste","Início da Peste","Início da Peste","Início da Peste","Início da Peste","Surto da Peste","Surto da Peste","Surto da Peste","Surto da Peste","A Peste","A Peste","A Peste","A Peste",
 ]
 
 var deck_2_list: Array[String] = [
@@ -39,7 +38,8 @@ var deck_2_list: Array[String] = [
 	"Membro da Royal Society","Guardião da Casa da Moeda","Disco de Newton", 
 	"Canhão de Newton",
 	"Trinity College","Trinity College","Trinity College","Trinity College","Trinity College",
-	"Trinity College","Woolsthorpe Manor","Woolsthorpe Manor","Woolsthorpe Manor","Woolsthorpe Manor","Woolsthorpe Manor","Woolsthorpe Manor","Início da Peste","Início da Peste","Início da Peste","Início da Peste","Início da Peste","Início da Peste","Surto da Peste","Surto da Peste","Surto da Peste","Surto da Peste","A Peste","A Peste","A Peste","A Peste",
+	"Trinity College","Trinity College","Trinity College","Trinity College","Trinity College",
+
 	
 ]
 

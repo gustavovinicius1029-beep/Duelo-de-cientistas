@@ -192,13 +192,15 @@ func _on_spell_cast_initiated(spell_card: Node2D):
 	if spell_name == "Início da Peste":
 		var restrictions = {"type": "Criatura"}
 		setup_targeting_state(spell_card, 0,1, restrictions, true)
-		opponent_is_waiting_for_pass = true
-		disable_game_inputs()
+
+	elif spell_name == "Maçã Caindo":
+		var restrictions = {"type": "Criatura"}
+		setup_targeting_state(spell_card,0, 1, restrictions, true)
+
 	elif spell_name == "Surto da Peste":
 		var restrictions = {"type": "Criatura", "max_health": 2}
 		setup_targeting_state(spell_card,0, 2, restrictions, true)
-		opponent_is_waiting_for_pass = true
-		disable_game_inputs()
+
 	elif spell_name == "A Peste":
 		var opponent_bm = get_opponent_battle_manager()
 		var opponent_peer_id = get_opponent_peer_id()
@@ -1228,6 +1230,7 @@ func update_ui_for_phase():
 		confirm_action_button.disabled = false
 		
 		if player_is_targeting_spell and is_instance_valid(spell_being_cast):
+			print("o jogador está mirando magia")
 			confirm_action_button.text = "Confirmar Alvos"
 			confirm_action_button.disabled = current_spell_target_count < current_spell_min_targets
 		else:
@@ -1248,10 +1251,10 @@ func update_ui_for_phase():
 			phase_button.text = "Iniciar Combate"
 			confirm_action_button.visible = player_is_targeting_spell # Mostra se estiver mirando
 			if player_is_targeting_spell: # Se estiver mirando...
-				print("pde lançar sem medo")
+				print("mirando magia")
 				confirm_action_button.text = "Confirmar alvos"
 				phase_button.disabled = true
-				confirm_action_button.disabled = false
+				confirm_action_button.disabled = current_spell_target_count < current_spell_min_targets
 			else:
 				phase_button.disabled = false
 				
