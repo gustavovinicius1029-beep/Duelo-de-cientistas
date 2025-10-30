@@ -7,6 +7,7 @@ var battle_timer
 var opponent_deck
 var opponent_hand
 var player_deck
+var player_hand
 var card_manager
 var player_health_label
 var opponent_health_label
@@ -41,6 +42,8 @@ var opponent_lands_in_play: int = 0
 
 var player_played_land_this_turn: bool = false
 var opponent_played_land_this_turn: bool = false
+var waiting_for_player_response: bool = false
+var opponent_is_waiting_for_pass: bool = false
 
 var player_cards_on_battlefield: Array = []
 var opponent_cards_on_battlefield: Array = []
@@ -91,14 +94,15 @@ func _ready():
 	var local_parent = get_parent()
 
 	combat_line_drawer_ref = local_parent.get_node("CombatLineDrawer")
-	phase_button = local_parent.get_node("PhaseButton") # !! RENOMEIE NA CENA para "PhaseButton" !!
+	phase_button = local_parent.get_node("PhaseButton") 
 	battle_timer = local_parent.get_node_or_null("BattleTimer")
 	player_deck = local_parent.get_node("Deck")
+	player_hand = local_parent.get_node("PlayerHand")
 	card_manager = local_parent.get_node("CardManager")
 	player_health_label = local_parent.get_node("PlayerHealthLabel")
 	player_discard = local_parent.get_node("PlayerDiscard")
 	player_energy_label = local_parent.get_node("PlayerEnergyLabel")
-	confirm_action_button = local_parent.get_node("ConfirmActionButton") # !! RENOMEIE NA CENA para "ConfirmActionButton" !!
+	confirm_action_button = local_parent.get_node("ConfirmActionButton")
 	player_slots_container = local_parent.get_node("PlayerCardSlots")
 	input_manager_ref = local_parent.get_node("InputManager")
 
@@ -120,14 +124,14 @@ func _ready():
 		card_manager.card_played.connect(_on_card_played)
 		card_manager.spell_cast_initiated.connect(_on_spell_cast_initiated)
 	else:
-		printerr("BattleManager: CardManager não encontrado.")
+		print("BattleManager: CardManager não encontrado.")
 
 	if is_instance_valid(input_manager_ref):
 		input_manager_ref.opponent_card_clicked.connect(_on_opponent_card_clicked)
 		input_manager_ref.player_card_clicked.connect(_on_player_card_clicked) # Conexão adicionada
 		input_manager_ref.player_deck_clicked.connect(_on_player_deck_clicked)
 	else:
-		printerr("BattleManager: InputManager não encontrado.")
+		print("BattleManager: InputManager não encontrado.")
 
 	if is_instance_valid(opponent_deck):
 		opponent_deck.set_process(false)
@@ -148,7 +152,7 @@ func _ready():
 			else:
 				opponent_land_slots_ref.append(slot)
 	else:
-		printerr("BattleManager: OpponentCardSlots não encontrado.")
+		print("BattleManager: OpponentCardSlots não encontrado.")
 
 	update_ui_for_phase()
 
@@ -177,8 +181,10 @@ func _on_card_played(card: Node2D):
 		var opponent_peer_id = get_opponent_peer_id()
 		if is_instance_valid(opponent_bm) and opponent_peer_id != 0:
 			opponent_bm.rpc_id(opponent_peer_id, "rpc_opponent_played_card", card.card_name, card_type, slot_index)
+			opponent_is_waiting_for_pass = true
+			disable_game_inputs() 
 		else:
-			printerr("ERRO (_on_card_played): Oponente BM ou Peer ID inválido.")
+			print("ERRO (_on_card_played): Oponente BM ou Peer ID inválido.")
 
 func _on_spell_cast_initiated(spell_card: Node2D):
 	var spell_name = spell_card.card_name
@@ -186,21 +192,27 @@ func _on_spell_cast_initiated(spell_card: Node2D):
 	if spell_name == "Início da Peste":
 		var restrictions = {"type": "Criatura"}
 		setup_targeting_state(spell_card, 0,1, restrictions, true)
+		opponent_is_waiting_for_pass = true
+		disable_game_inputs()
 	elif spell_name == "Surto da Peste":
 		var restrictions = {"type": "Criatura", "max_health": 2}
 		setup_targeting_state(spell_card,0, 2, restrictions, true)
+		opponent_is_waiting_for_pass = true
+		disable_game_inputs()
 	elif spell_name == "A Peste":
 		var opponent_bm = get_opponent_battle_manager()
 		var opponent_peer_id = get_opponent_peer_id()
 		if is_instance_valid(opponent_bm) and opponent_peer_id != 0:
 			opponent_bm.rpc_id(opponent_peer_id, "rpc_opponent_cast_global_spell", "A Peste")
+			opponent_is_waiting_for_pass = true
+			disable_game_inputs()
 		if spell_card.ability_script != null:
 			await spell_card.ability_script.trigger_ability(self, spell_card, "Jogador")
 		else:
-			printerr("ERRO: 'A Peste' sem ability_script!")
+			print("ERRO: 'A Peste' sem ability_script!")
 		reset_targeting_state()
 	else:
-		printerr("ERRO: Feitiço desconhecido iniciado: ", spell_name)
+		print("ERRO: Feitiço desconhecido iniciado: ", spell_name)
 		if is_instance_valid(spell_card): spell_card.queue_free()
 		reset_targeting_state()
 
@@ -240,14 +252,14 @@ func _on_player_deck_clicked():
 			if is_instance_valid(opponent_bm) and opponent_peer_id != 0:
 				opponent_bm.rpc_id(opponent_peer_id, "rpc_draw_opponent_card")
 			else:
-				printerr("ERRO (_on_player_deck_clicked): Oponente BM ou Peer ID inválido.")
+				print("ERRO (_on_player_deck_clicked): Oponente BM ou Peer ID inválido.")
 			player_deck.drawn_card_this_turn = true
 	else:
-		printerr("ERRO (BattleManager): Referência ao player_deck inválida.")
+		print("ERRO (BattleManager): Referência ao player_deck inválida.")
 
 func _on_phase_button_pressed():
 	if is_opponent_turn or player_is_attacking: return
-
+	if opponent_is_waiting_for_pass: return
 	match current_combat_phase:
 		CombatPhase.NONE: enter_begin_combat_phase()
 		CombatPhase.BEGIN_COMBAT: enter_declare_attackers_phase()
@@ -261,12 +273,71 @@ func _on_phase_button_pressed():
 # Em scripts/battle_manager.gd
 
 func _on_confirm_action_button_pressed():
+	
+	# --- 1. LÓGICA DE PRIORIDADE / RESPOSTA (QUANDO NÓS TEMOS A JANELA) ---
+	if waiting_for_player_response:
+		# Se estamos mirando uma Magia Instantânea
+		if player_is_targeting_spell and is_instance_valid(spell_being_cast):
+			if current_spell_target_count < current_spell_min_targets:
+				print("Ainda faltam alvos para selecionar.")
+				return
+
+			if spell_being_cast.ability_script != null:
+				var spell_name = spell_being_cast.card_name
+				var target_data_array = []
+				for target in current_spell_targets:
+					var target_owner = ""
+					var target_slot_index = -1
+					if player_cards_on_battlefield.has(target):
+						target_owner = "Jogador"
+						target_slot_index = player_creature_slots_ref.find(target.card_slot_card_is_in)
+					elif opponent_cards_on_battlefield.has(target):
+						target_owner = "Oponente"
+						target_slot_index = opponent_creature_slots_ref.find(target.card_slot_card_is_in)
+
+					if target_slot_index != -1:
+						target_data_array.append({"owner": target_owner, "slot_index": target_slot_index})
+				
+				var opponent_bm = get_opponent_battle_manager()
+				var opponent_peer_id = get_opponent_peer_id()
+				if is_instance_valid(opponent_bm) and opponent_peer_id != 0:
+					opponent_bm.rpc_id(opponent_peer_id, "rpc_opponent_cast_targeted_spell", spell_name, target_data_array)
+					
+					# ESPERAMOS O OPONENTE RESPONDER À NOSSA MÁGICA
+					opponent_is_waiting_for_pass = true
+					disable_game_inputs() # Trava a UI
+					
+				await spell_being_cast.ability_script.trigger_ability(self, current_spell_targets, spell_being_cast, "Jogador")
+			else:
+				print("ERRO: Feitiço instantâneo sem ability_script!")
+			
+			reset_targeting_state() # Limpa a mira
+			waiting_for_player_response = false # Não estamos mais na janela de resposta
+			update_ui_for_phase() # Atualiza UI (deve ficar travada)
+			return
+		
+		# Se não estamos mirando, estamos passando a prioridade
+		else:
+			pass_priority_to_opponent()
+			return
+	# --- FIM DA LÓGICA DE RESPOSTA ---
+
+	# --- 2. CHECAGENS DE AÇÃO NORMAL ---
+
+	# Guarda original: (Não pode agir se for turno do oponente (exceto bloqueio) ou se uma animação de ataque estiver ocorrendo)
 	if (is_opponent_turn and current_combat_phase != CombatPhase.DECLARE_BLOCKERS) or player_is_attacking:
 		print("Ação bloqueada: Turno do oponente ou atacando.")
 		return
+		
+	# Nova guarda: (Não pode agir se estivermos esperando o oponente nos passar a prioridade)
+	if opponent_is_waiting_for_pass:
+		print("Ação bloqueada: Esperando resposta do oponente.")
+		return
+
+	# --- 3. EXECUÇÃO DE AÇÃO NORMAL (BASEADO NA FASE) ---
 	match current_combat_phase:
 		
-		CombatPhase.NONE: # Adicione este caso para feitiços
+		CombatPhase.NONE: # Lançar Feitiços (Velocidade Normal)
 			if not is_opponent_turn and player_is_targeting_spell and is_instance_valid(spell_being_cast):
 				  # Garante que o número correto de alvos foi selecionado
 				if current_spell_target_count < current_spell_min_targets:
@@ -293,22 +364,30 @@ func _on_confirm_action_button_pressed():
 					var opponent_peer_id = get_opponent_peer_id()
 					if is_instance_valid(opponent_bm) and opponent_peer_id != 0:
 						  # Notifica o oponente sobre o feitiço com alvos
-						opponent_bm.rpc_id(opponent_peer_id, "rpc_opponent_cast_targeted_spell", spell_name, target_data_array) #
+						opponent_bm.rpc_id(opponent_peer_id, "rpc_opponent_cast_targeted_spell", spell_name, target_data_array)
+						
+						# ADICIONADO: Espera resposta do oponente
+						opponent_is_waiting_for_pass = true
+						disable_game_inputs()
 
 					 # Executa a habilidade localmente
-					await spell_being_cast.ability_script.trigger_ability(self, current_spell_targets, spell_being_cast, "Jogador") #
+					await spell_being_cast.ability_script.trigger_ability(self, current_spell_targets, spell_being_cast, "Jogador")
 				else:
-					printerr("ERRO: Feitiço sem ability_script!")
+					print("ERRO: Feitiço sem ability_script!")
 					enable_game_inputs() # Reabilita inputs em caso de erro
 
 				reset_targeting_state() # Limpa o estado de mira
 		
 		CombatPhase.DECLARE_ATTACKERS:
 			if not is_opponent_turn:
-				confirm_attackers()
+				confirm_attackers() # Esta função agora define opponent_is_waiting_for_pass
+		
 		CombatPhase.DECLARE_BLOCKERS:
+			# Se formos nós (o defensor) confirmando os bloqueios
 			if is_opponent_turn:
-				confirm_blockers()
+				confirm_blockers() # Esta função agora resolve o combate
+			
+			# Lógica original (estranha) para o ATACANTE castar feitiços nesta fase
 			if not is_opponent_turn and player_is_targeting_spell and is_instance_valid(spell_being_cast):
 				print("pode jogar ofeitiço")
 				if spell_being_cast.ability_script != null:
@@ -332,15 +411,21 @@ func _on_confirm_action_button_pressed():
 					if is_instance_valid(opponent_bm) and opponent_peer_id != 0:
 						opponent_bm.rpc_id(opponent_peer_id, "rpc_opponent_cast_targeted_spell", spell_name, target_data_array)
 
+						# ADICIONADO: Espera resposta do oponente
+						opponent_is_waiting_for_pass = true
+						disable_game_inputs()
+
 					await spell_being_cast.ability_script.trigger_ability(self, current_spell_targets, spell_being_cast, "Jogador")
 				else:
-					printerr("ERRO: Feitiço sem ability_script!")
+					print("ERRO: Feitiço sem ability_script!")
 					enable_game_inputs()
 
 				reset_targeting_state()
 			else:
-				print("falhou")
-				reset_targeting_state()
+				# Só printa "falhou" se não for o defensor e não estiver castando
+				if not is_opponent_turn and not player_is_targeting_spell:
+					print("falhou")
+					reset_targeting_state()
 
 @rpc("any_peer", "call_local")
 func start_turn(player_or_opponent: String):
@@ -373,7 +458,24 @@ func start_turn(player_or_opponent: String):
 func end_player_turn():
 	
 	if is_instance_valid(combat_line_drawer_ref): combat_line_drawer_ref.clear_drawing()
-	
+	print("Solicitando fim de turno.")
+	var opponent_bm = get_opponent_battle_manager()
+	var opponent_peer_id = get_opponent_peer_id()
+	if is_instance_valid(opponent_bm) and opponent_peer_id != 0:
+		opponent_bm.rpc_id(opponent_peer_id, "rpc_grant_priority_on_end_turn")
+		opponent_is_waiting_for_pass = true # Nós esperamos
+		disable_game_inputs()
+	else:
+		print("ERRO (end_player_turn): Oponente BM ou Peer ID inválido.")
+		_execute_end_turn()
+	start_turn("Oponente") # Muda estado localmente
+	if is_instance_valid(opponent_bm) and opponent_peer_id != 0:
+		opponent_bm.rpc_id(opponent_peer_id, "start_turn", "Jogador") # Informa oponente para iniciar
+	else:
+		print("ERRO (end_player_turn): Oponente BM ou Peer ID inválido.")
+	update_ui_for_phase()
+
+func _execute_end_turn():
 	print("Finalizando turno do jogador.")
 	set_current_combat_phase(CombatPhase.NONE)
 	if is_instance_valid(card_manager): card_manager.clear_attacker_selection()
@@ -381,15 +483,13 @@ func end_player_turn():
 	declared_attackers.clear()
 	declared_blockers.clear()
 	blocker_assignments.clear()
-
 	start_turn("Oponente") # Muda estado localmente
 	var opponent_bm = get_opponent_battle_manager()
 	var opponent_peer_id = get_opponent_peer_id()
 	if is_instance_valid(opponent_bm) and opponent_peer_id != 0:
 		opponent_bm.rpc_id(opponent_peer_id, "start_turn", "Jogador") # Informa oponente para iniciar
 	else:
-		printerr("ERRO (end_player_turn): Oponente BM ou Peer ID inválido.")
-	update_ui_for_phase()
+		print("ERRO (execute_end_turn): Oponente BM ou Peer ID inválido.")
 
 func enter_begin_combat_phase():
 	print("Entrando na Fase: Início de Combate")
@@ -486,10 +586,12 @@ func confirm_attackers():
 	var opponent_peer_id = get_opponent_peer_id()
 	if is_instance_valid(opponent_bm) and opponent_peer_id != 0:
 		opponent_bm.rpc_id(opponent_peer_id, "rpc_declare_attackers", attacker_indices)
+		opponent_is_waiting_for_pass = true
+		disable_game_inputs()
 	else:
-		printerr("ERRO (confirm_attackers): Oponente BM ou Peer ID inválido.")
+		print("ERRO (confirm_attackers): Oponente BM ou Peer ID inválido.")
 
-	enter_declare_blockers_phase() # Atacante agora espera bloqueadores
+	enter_declare_blockers_phase()
 
 func confirm_blockers():
 	print("Confirmando Bloqueadores...")
@@ -509,18 +611,18 @@ func confirm_blockers():
 				if blocker_slot_index != -1:
 					blocker_indices.append(blocker_slot_index)
 				else:
-					printerr("ERRO (confirm_blockers): Índice do slot do bloqueador ", blocker_card.card_name, " não encontrado.")
+					print("ERRO (confirm_blockers): Índice do slot do bloqueador ", blocker_card.card_name, " não encontrado.")
 			if not blocker_indices.is_empty():
 				blocker_data_for_rpc[str(attacker_slot_index)] = blocker_indices
 		else:
-			printerr("ERRO (confirm_blockers): Índice do slot do atacante ", attacker_card.card_name, " não encontrado.")
+			print("ERRO (confirm_blockers): Índice do slot do atacante ", attacker_card.card_name, " não encontrado.")
 	print("Enviando dados de bloqueio via RPC: ", blocker_data_for_rpc)
 	var opponent_bm = get_opponent_battle_manager()
 	var opponent_peer_id = get_opponent_peer_id()
 	if is_instance_valid(opponent_bm) and opponent_peer_id != 0:
 		opponent_bm.rpc_id(opponent_peer_id, "rpc_receive_blockers", blocker_data_for_rpc)
 	else:
-		printerr("ERRO (confirm_blockers): Oponente BM ou Peer ID inválido.")
+		print("ERRO (confirm_blockers): Oponente BM ou Peer ID inválido.")
 	if is_instance_valid(combat_line_drawer_ref):
 		combat_line_drawer_ref.clear_drawing()
 	resolve_combat_damage(local_blocker_assignments) # <<<<<<< PASSAR COMO ARGUMENTO
@@ -713,14 +815,14 @@ func rpc_opponent_played_card(card_name: String, card_type: String, slot_index: 
 			target_slot = opponent_land_slots_ref[slot_index]
 
 	if not is_instance_valid(target_slot) or target_slot.card_in_slot:
-		printerr("ERRO RPC rpc_opponent_played_card: Slot inválido ou ocupado!")
+		print("ERRO RPC rpc_opponent_played_card: Slot inválido ou ocupado!")
 		return
 
 	var card_to_play = opponent_hand.remove_card_from_hand_by_rpc()
 	if not is_instance_valid(card_to_play):
 		card_to_play = preload("res://scenes/opponent_card.tscn").instantiate()
 		if is_instance_valid(card_manager): card_manager.add_child(card_to_play)
-		else: printerr("ERRO RPC rpc_opponent_played_card: CardManager inválido."); card_to_play.queue_free(); return
+		else: print("ERRO RPC rpc_opponent_played_card: CardManager inválido."); card_to_play.queue_free(); return
 		if is_instance_valid(opponent_deck): card_to_play.global_position = opponent_deck.global_position
 		else: card_to_play.global_position = Vector2.ZERO # Fallback
 
@@ -766,6 +868,7 @@ func rpc_opponent_played_card(card_name: String, card_type: String, slot_index: 
 		card_to_play.animation_player.play("card_flip")
 		await card_to_play.animation_player.animation_finished
 	card_to_play.setup_card_display()
+	_grant_priority_to_player()
 
 @rpc("any_peer")
 func rpc_receive_attack(attacker_slot_index: int, defender_slot_index: int):
@@ -785,7 +888,7 @@ func rpc_receive_attack(attacker_slot_index: int, defender_slot_index: int):
 	if is_instance_valid(attacking_card) and is_instance_valid(defending_card):
 		await attack(attacking_card, defending_card, "Oponente")
 	else:
-		printerr("ERRO RPC: rpc_receive_attack não encontrou as cartas.")
+		print("ERRO RPC: rpc_receive_attack não encontrou as cartas.")
 
 @rpc("any_peer")
 func rpc_receive_direct_attack(attacker_slot_index: int):
@@ -797,7 +900,7 @@ func rpc_receive_direct_attack(attacker_slot_index: int):
 	if is_instance_valid(attacking_card):
 		await direct_attack(attacking_card, "Oponente")
 	else:
-		printerr("ERRO RPC: rpc_receive_direct_attack não encontrou a carta.")
+		print("ERRO RPC: rpc_receive_direct_attack não encontrou a carta.")
 
 @rpc("any_peer")
 func rpc_opponent_cast_targeted_spell(spell_name: String, target_data_array: Array):
@@ -811,7 +914,7 @@ func rpc_opponent_cast_targeted_spell(spell_name: String, target_data_array: Arr
 	if not is_instance_valid(fake_spell_card):
 		fake_spell_card = preload("res://scenes/opponent_card.tscn").instantiate()
 		if is_instance_valid(card_manager): card_manager.add_child(fake_spell_card)
-		else: printerr("ERRO RPC target spell: CardManager inválido."); fake_spell_card.queue_free(); return
+		else: print("ERRO RPC target spell: CardManager inválido."); fake_spell_card.queue_free(); return
 		fake_spell_card.visible = false
 
 	var local_target_nodes = []
@@ -823,25 +926,27 @@ func rpc_opponent_cast_targeted_spell(spell_name: String, target_data_array: Arr
 
 	var ability_script = load(ability_path).new()
 	await ability_script.trigger_ability(self, local_target_nodes, fake_spell_card, "Oponente")
+	_grant_priority_to_player()
 	
 @rpc("any_peer")
 func rpc_opponent_cast_global_spell(spell_name: String):
-	if not card_database_ref.CARDS.has(spell_name): printerr("ERRO RPC global spell: Feitiço desconhecido: ", spell_name); return
+	if not card_database_ref.CARDS.has(spell_name): print("ERRO RPC global spell: Feitiço desconhecido: ", spell_name); return
 	var card_data = card_database_ref.CARDS[spell_name]
 	var energy_cost = card_data[4]; var ability_path = card_data[6]
-	if ability_path == null: printerr("ERRO RPC global spell: Sem script: ", spell_name); return
+	if ability_path == null: print("ERRO RPC global spell: Sem script: ", spell_name); return
 
 	opponent_current_energy -= energy_cost; update_energy_labels()
 	var fake_spell_card = opponent_hand.remove_card_from_hand_by_rpc()
 	if not is_instance_valid(fake_spell_card):
 		fake_spell_card = preload("res://scenes/opponent_card.tscn").instantiate()
 		if is_instance_valid(card_manager): card_manager.add_child(fake_spell_card)
-		else: printerr("ERRO RPC global spell: CardManager inválido."); fake_spell_card.queue_free(); return
+		else: print("ERRO RPC global spell: CardManager inválido."); fake_spell_card.queue_free(); return
 		fake_spell_card.visible = false
 
 	var ability_script = load(ability_path).new()
 	await ability_script.trigger_ability(self, fake_spell_card, "Oponente") # Passa a carta fake
-
+	_grant_priority_to_player()
+	
 @rpc("any_peer")
 func rpc_declare_attackers(attacker_indices: Array[int]):
 	print("RPC Recebido: Atacantes declarados nos índices: ", attacker_indices)
@@ -852,8 +957,49 @@ func rpc_declare_attackers(attacker_indices: Array[int]):
 			declared_attackers.append(card)
 			if card.has_method("show_attack_indicator"): card.show_attack_indicator(true)
 		else:
-			printerr("RPC rpc_declare_attackers: Não foi possível encontrar atacante no índice ", index)
+			print("RPC rpc_declare_attackers: Não foi possível encontrar atacante no índice ", index)
 	enter_declare_blockers_phase_as_defender()
+	_grant_priority_to_player()
+
+func player_has_instant_in_hand() -> bool:
+	if is_instance_valid(player_hand):
+		for card in player_hand.cards_in_hand:
+			if is_instance_valid(card) and card.card_type == "Magia Instantânea":
+				if player_current_energy >= card.energy_cost:
+					return true
+	return false
+	
+func _grant_priority_to_player():
+	if player_has_instant_in_hand():
+		waiting_for_player_response = true
+		update_ui_for_phase() # Mostra o botão "Continuar"
+	else:
+		pass_priority_to_opponent()
+		
+func pass_priority_to_opponent():
+	waiting_for_player_response = false
+	update_ui_for_phase() # Esconde o botão "Continuar"
+	var opponent_bm = get_opponent_battle_manager()
+	var opponent_peer_id = get_opponent_peer_id()
+	if is_instance_valid(opponent_bm) and opponent_peer_id != 0:
+		opponent_bm.rpc_id(opponent_peer_id, "rpc_player_passed_priority")
+
+@rpc("any_peer", "call_local")
+func rpc_player_passed_priority():
+	if opponent_is_waiting_for_pass:
+		opponent_is_waiting_for_pass = false
+		print(get_parent().name, " recebeu passe de prioridade.")
+		if current_combat_phase == CombatPhase.END_COMBAT:
+			_execute_end_turn()
+		else:
+			enable_game_inputs()
+	else:
+		print("Aviso: Recebeu rpc_player_passed_priority() quando não estava esperando.")
+
+@rpc("any_peer", "call_local")
+func rpc_grant_priority_on_end_turn():
+	print("Oponente está terminando o turno. Concedendo prioridade.")
+	_grant_priority_to_player()
 
 @rpc("any_peer")
 func rpc_receive_blockers(blocker_data: Dictionary):
@@ -879,12 +1025,12 @@ func rpc_receive_blockers(blocker_data: Dictionary):
 					if blocker_card.has_method("show_block_indicator"): blocker_card.show_block_indicator(true)
 					blocker_assignments[blocker_card] = attacker_card
 				else:
-					printerr("RPC rpc_receive_blockers: Bloqueador não encontrado no índice ", blocker_index)
+					print("RPC rpc_receive_blockers: Bloqueador não encontrado no índice ", blocker_index)
 
 			if not blocker_node_list.is_empty():
 				declared_blockers[attacker_card] = blocker_node_list
 		else:
-			printerr("RPC rpc_receive_blockers: Atacante não encontrado no slot de índice ", attacker_index)
+			print("RPC rpc_receive_blockers: Atacante não encontrado no slot de índice ", attacker_index)
 
 	if is_instance_valid(combat_line_drawer_ref):
 		combat_line_drawer_ref.update_drawing(declared_blockers, not blocker_assignments.is_empty())
@@ -1066,26 +1212,36 @@ func disable_game_inputs():
 		phase_button.disabled = true
 	if is_instance_valid(confirm_action_button): 
 		confirm_action_button.disabled = true
-	# Considerar desabilitar input_manager se necessário
 
 func enable_game_inputs():
-	# Só reabilita se for turno do jogador e não estiver em animação
-	if not is_opponent_turn and not player_is_attacking:
-		update_ui_for_phase() # Deixa a função de UI decidir o estado dos botões
+	if not opponent_is_waiting_for_pass:
+		update_ui_for_phase()
 
 func update_ui_for_phase():
 	
 	if not is_instance_valid(phase_button) or not is_instance_valid(confirm_action_button): 
 		return
-
+	
+	if waiting_for_player_response:
+		phase_button.visible = false
+		confirm_action_button.visible = true
+		confirm_action_button.disabled = false
+		
+		if player_is_targeting_spell and is_instance_valid(spell_being_cast):
+			confirm_action_button.text = "Confirmar Alvos"
+			confirm_action_button.disabled = current_spell_target_count < current_spell_min_targets
+		else:
+			confirm_action_button.text = "Continuar" # (Passar prioridade)
+		return
+	
 	if is_opponent_turn:
 		phase_button.visible = false
 		confirm_action_button.visible = false
 		return
-
+	var buttons_disabled = opponent_is_waiting_for_pass
 	confirm_action_button.visible = false
 	phase_button.visible = true
-	phase_button.disabled = false
+	phase_button.disabled = buttons_disabled
 
 	match current_combat_phase:
 		CombatPhase.NONE:
@@ -1119,6 +1275,11 @@ func update_ui_for_phase():
 	
 func update_ui_for_phase_defender():
 	if not is_instance_valid(phase_button) or not is_instance_valid(confirm_action_button): return
+	
+	if waiting_for_player_response:
+		update_ui_for_phase() # Reutiliza a lógica de prioridade
+		return
+	
 	phase_button.visible = false
 	confirm_action_button.text = "Confirmar Bloqueadores"
 	confirm_action_button.disabled = false
@@ -1189,7 +1350,7 @@ func summon_token(card_name: String, card_owner: String):
 	elif card_owner == "Oponente":
 		slots_array = opponent_creature_slots_ref
 		card_to_instance = preload("res://scenes/opponent_card.tscn")
-	else: printerr("ERRO summon_token: 'card_owner' desconhecido: ", card_owner); return
+	else: print("ERRO summon_token: 'card_owner' desconhecido: ", card_owner); return
 
 	for slot in slots_array:
 		if is_instance_valid(slot) and not slot.card_in_slot: empty_slot = slot; break
@@ -1208,7 +1369,7 @@ func summon_token(card_name: String, card_owner: String):
 	new_card.name = "Token_" + card_name.replace(" ", "_")
 	new_card.card_name = card_name
 	if is_instance_valid(card_manager): card_manager.add_child(new_card)
-	else: get_tree().root.add_child(new_card); printerr("ERRO summon_token: CardManager inválido.") # Fallback
+	else: get_tree().root.add_child(new_card); print("ERRO summon_token: CardManager inválido.") # Fallback
 
 	# Preenche dados
 	var card_data = card_database_ref.CARDS[card_name]

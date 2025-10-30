@@ -36,143 +36,24 @@ func _ready():
 
 	# Conecta aos sinais do Input Manager
 	if is_instance_valid(input_manager_ref):
-		input_manager_ref.left_mouse_button_released.connect(_on_left_click_released)
+		input_manager_ref.left_mouse_button_clicked.connect(_on_left_mouse_button_clicked)
+		input_manager_ref.left_mouse_button_released.connect(_on_left_mouse_button_released)
 		input_manager_ref.player_card_clicked.connect(_on_player_card_clicked)
 	else:
-		print("ERRO: InputManager não encontrado em CardManager.")
+		print("CardManager: InputManager não encontrado em " + player_path)
 		
 func _process(_delta):
-	# Atualiza a posição da carta sendo arrastada
 	if card_being_dragged:
 		card_being_dragged.global_position = get_global_mouse_position()
-	
-	# Gerencia o estado visual de hover a cada frame
 	update_hover_state()
 
-# Inicia o processo de arrastar uma carta (geralmente da mão)
-func start_drag(card_to_drag: Node2D):
-	clear_attacker_selection()
-	card_being_hovered = null
-	card_being_dragged = card_to_drag
-	card_being_dragged.z_index = 10
-	emit_signal("card_drag_started", card_to_drag) # Emite sinal
+func _on_left_mouse_button_clicked():
+	pass
 
-# Chamado quando o botão esquerdo do mouse é solto
+func _on_left_mouse_button_released():
+	if is_instance_valid(card_being_dragged):
+		end_drag()
 
-func clear_attacker_selection():
-	# Remove indicadores visuais e limpa a lista
-	for attacker in selected_attackers:
-		if is_instance_valid(attacker):
-			attacker.show_attack_indicator(false)
-			attacker.position.y += 20 # Move de volta se você moveu ao selecionar
-	selected_attackers.clear()
-
-func _on_left_click_released():
-	if card_being_dragged:
-		finish_drag()
-
-# Finaliza o processo de arrastar e tenta jogar a carta
-func finish_drag():
-	var original_card = card_being_dragged
-	var final_slot = null
-
-	if card_being_dragged:
-		# 1. Verifica Limite de Terreno
-		if card_being_dragged.card_type == "Terreno" and battle_manager_ref.player_played_land_this_turn:
-			player_hand_ref.add_card_to_hand(card_being_dragged, Constants.DEFAULT_CARD_MOVE_SPEED)
-			# Sinal de fim ANTES de resetar
-			emit_signal("card_drag_finished", original_card, null)
-			card_being_dragged = null
-			return
-
-		# 2. Verifica Custo de Energia (Criaturas/Feitiços)
-		if card_being_dragged.card_type != "Terreno":
-			if card_being_dragged.energy_cost > battle_manager_ref.player_current_energy:
-				player_hand_ref.add_card_to_hand(card_being_dragged, Constants.DEFAULT_CARD_MOVE_SPEED)
-				# Sinal de fim ANTES de resetar
-				emit_signal("card_drag_finished", original_card, null)
-				card_being_dragged = null
-				return
-
-		# 3. Lógica específica para Feitiços
-		if card_being_dragged.card_type == "feitiço":
-			var spell_name = card_being_dragged.card_name
-			var can_cast = true
-			if spell_name == "A Peste":
-				if not battle_manager_ref.check_plague_condition():
-					can_cast = false
-
-			if not can_cast:
-				battle_manager_ref.animate_card_to_position_and_scale(card_being_dragged, card_being_dragged.hand_position, Constants.DEFAULT_CARD_SCALE, Constants.DEFAULT_CARD_MOVE_SPEED)
-				# Sinal de fim ANTES de resetar
-				emit_signal("card_drag_finished", original_card, null)
-				card_being_dragged = null
-				return
-
-			# Se pode lançar o feitiço
-			battle_manager_ref.player_current_energy -= card_being_dragged.energy_cost
-			battle_manager_ref.update_energy_labels()
-			player_hand_ref.remove_card_from_hand(card_being_dragged, Constants.DEFAULT_CARD_MOVE_SPEED)
-			card_being_dragged.visible = false # Esconde carta temporariamente
-
-			emit_signal("spell_cast_initiated", original_card) # Sinaliza que um feitiço começou
-
-			# Não emite card_drag_finished aqui, o feitiço está em processo
-			card_being_dragged = null
-			return # Pula lógica de slot
-
-		# 4. Procura slot válido (para Criaturas/Terrenos)
-		var card_slot_found = raycast_check_for_card_slot()
-		final_slot = card_slot_found # Guarda para o sinal final
-
-		# 5. Verifica slot (vazio e tipo correto)
-		if card_slot_found and not card_slot_found.card_in_slot and card_being_dragged.card_type == card_slot_found.card_slot_type:
-			# Posiciona e dimensiona
-			card_being_dragged.global_position = card_slot_found.global_position
-			card_being_dragged.scale = Constants.CARD_SMALLER_SCALE
-			card_being_dragged.z_index = -1
-
-			# Reabilita colisão da carta
-			var card_area = card_being_dragged.find_child("Area2D")
-			if is_instance_valid(card_area):
-				var shape = card_area.find_child("CollisionShape2D")
-				if is_instance_valid(shape): shape.disabled = false
-
-			# Desabilita colisão do SLOT
-			var slot_area = card_slot_found.get_node_or_null("Area2D")
-			if is_instance_valid(slot_area):
-				var slot_shape = slot_area.get_node_or_null("CollisionShape2D")
-				if is_instance_valid(slot_shape): slot_shape.disabled = true
-
-			# Atualiza estado
-			card_slot_found.card_in_slot = true
-			card_being_dragged.card_slot_card_is_in = card_slot_found
-
-			# Remove da mão visualmente
-			player_hand_ref.remove_card_from_hand(card_being_dragged, Constants.DEFAULT_CARD_MOVE_SPEED)
-
-			if card_being_dragged.card_type == "Criatura": # Certifique-se que é uma criatura
-				battle_manager_ref.player_current_energy -= card_being_dragged.energy_cost # Deduz a energia
-				battle_manager_ref.update_energy_labels() # Atualiza o label imediatamente
-			# --- FIM DA CORREÇÃO ---
-
-			# Emite sinal indicando que a carta foi jogada com sucesso
-			emit_signal("card_played", original_card) #
-
-			# Marca trava de turno no BattleManager (se for terreno)
-			if card_being_dragged.card_type == "Terreno": #
-				battle_manager_ref.player_played_land_this_turn = true #
-		else:
-			# Slot inválido ou ocupado, retorna para a mão
-			player_hand_ref.add_card_to_hand(card_being_dragged, Constants.DEFAULT_CARD_MOVE_SPEED) #
-
-	# Emite o sinal de fim de drag (independente de sucesso ou falha ao jogar no slot)
-	if is_instance_valid(original_card):
-		emit_signal("card_drag_finished", original_card, final_slot) #
-
-	card_being_dragged = null
-	
-# Gerencia o efeito visual de hover
 func update_hover_state():
 	# Se estiver arrastando ou uma carta já estiver selecionada para ataque, limpe o hover e saia.
 	if card_being_dragged or selected_attackers:
@@ -254,30 +135,203 @@ func reset_turn_limits():
 # Função principal chamada pelo InputManager quando uma carta do jogador é clicada
 # Em scripts/CardManager.gd
 
+# Em CardManager.gd
+# Conectado ao sinal 'player_card_clicked' do InputManager
 func _on_player_card_clicked(card: Node2D):
-	var multiplayer_node = get_node_or_null("/root/Main") # Caminho para o nó com multiplayer.gd
-	if not is_instance_valid(multiplayer_node) or not multiplayer_node.game_started:
-		print("Aguardando início do jogo (Mulligan). Clique na carta bloqueado.")
+	if not is_instance_valid(card) or not is_instance_valid(battle_manager_ref):
 		return
-	if not is_instance_valid(battle_manager_ref) or battle_manager_ref.is_opponent_turn or battle_manager_ref.player_is_attacking:
-		return
-	if battle_manager_ref.current_combat_phase == battle_manager_ref.CombatPhase.DECLARE_ATTACKERS:
-		if card.card_slot_card_is_in != null and card.card_type == "Criatura" \
-		and not battle_manager_ref.player_cards_that_attacked_this_turn.has(card):
 
-			if selected_attackers.has(card):
-				selected_attackers.erase(card)
-				if card.has_method("show_attack_indicator"): card.show_attack_indicator(false)
-				card.position.y += 20 # Exemplo: move para baixo
-			else:
-				selected_attackers.append(card)
-				if card.has_method("show_attack_indicator"): card.show_attack_indicator(true)
-				card.position.y -= 20 # Exemplo: move para cima
-		return # Impede de arrastar durante esta fase
-	if card.card_slot_card_is_in == null and battle_manager_ref.current_combat_phase == battle_manager_ref.CombatPhase.NONE:
+	var bm = battle_manager_ref
+
+	# --- 1. LÓGICA DE PRIORIDADE (A VERIFICAÇÃO PRINCIPAL) ---
+	# Cenário 1: É o nosso turno, não estamos esperando o oponente.
+	var can_play_on_own_turn = not bm.is_opponent_turn and not bm.opponent_is_waiting_for_pass
+	
+	# Cenário 2: Temos prioridade (respondendo) E a carta é uma instantânea.
+	var can_play_as_instant = bm.waiting_for_player_response and \
+							  card.card_type == "Magia Instantânea"
+
+	# Se não pudermos jogar em nenhum dos cenários, verificamos se é um clique de ataque
+	if not (can_play_on_own_turn or can_play_as_instant):
+		
+		# Exceção: Clicar para atacar (Isso é permitido)
+		if bm.current_combat_phase == bm.CombatPhase.DECLARE_ATTACKERS and \
+			not bm.is_opponent_turn and card.card_type == "Criatura":
+			toggle_attacker(card) # Permite selecionar atacante
+			return
+		
+		# Se não for um clique de ataque, bloqueia a ação.
+		print("Não pode jogar agora. TurnoOp: %s, EsperandoOponente: %s, EsperandoNossaResp: %s" % [bm.is_opponent_turn, bm.opponent_is_waiting_for_pass, bm.waiting_for_player_response])
+		return
+	# --- FIM DA LÓGICA DE PRIORIDADE ---
+
+	# --- 2. LÓGICA DE AÇÃO (SE A VERIFICAÇÃO ACIMA PASSAR) ---
+
+	# Lógica de Ataque (Se a verificação passou, mas estamos na fase de ataque)
+	if bm.current_combat_phase == bm.CombatPhase.DECLARE_ATTACKERS and \
+	   not bm.is_opponent_turn and card.card_type == "Criatura" and \
+	   not bm.player_cards_that_attacked_this_turn.has(card):
+		toggle_attacker(card)
+		return
+
+	# Lógica de Drag de Magias (feitiço OU Magia Instantânea)
+	if card.card_type == "feitiço" or card.card_type == "Magia Instantânea":
+		# (A checagem de custo e turno será feita no try_play_spell_no_slot ao soltar)
 		start_drag(card)
 		return
+	
+	# Lógica de Drag de Criatura/Terreno
+	if card.card_type == "Terreno" or card.card_type == "Criatura":
+		# (A checagem de turno/fase será feita no try_play_card_on_slot ao soltar)
+		if bm.is_opponent_turn: return # Segurança (já verificado, mas bom ter)
+		if bm.current_combat_phase == bm.CombatPhase.NONE:
+			start_drag(card)
+			return
 
+func start_drag(card: Node2D):
+	if card_being_dragged or not is_instance_valid(card):
+		return
+	if is_instance_valid(player_hand_ref):
+		player_hand_ref.remove_card_from_hand(card, 0)
+	card_being_dragged = card
+	card_being_dragged.z_index = 100 # Garante que a carta fique no topo
+	emit_signal("card_drag_started", card)
+
+func end_drag():
+	var card = card_being_dragged
+	if not is_instance_valid(card):
+		return
+
+	var target_slot = raycast_check_for_card_slot()
+	var success = false
+
+	# Se a carta for um feitiço ou magia, não precisa de slot
+	if card.card_type == "feitiço" or card.card_type == "Magia Instantânea":
+		success = try_play_spell_no_slot(card)
+	# Se for criatura ou terreno, precisa de slot
+	elif is_instance_valid(target_slot):
+		success = try_play_card_on_slot(card, target_slot)
+
+	if success:
+		card_being_dragged = null
+		if card.card_type == "Criatura" or card.card_type == "Terreno":
+			if is_instance_valid(target_slot):
+				card.global_position = target_slot.global_position
+				card.scale = Constants.CARD_SMALLER_SCALE #
+				card.z_index = -1
+		# O BattleManager ou PlayerHand cuidará de mover/deletar a carta
+	else:
+		# Retorna a carta para a mão
+		if is_instance_valid(player_hand_ref):
+			player_hand_ref.add_card_to_hand(card)
+		card_being_dragged.z_index = 1 # Retorna ao Z-index normal
+		card_being_dragged = null
+
+	emit_signal("card_drag_finished", card, target_slot if success else null)
+	
+func try_play_card_on_slot(card: Node2D, slot: Node2D) -> bool:
+	if not is_instance_valid(card) or not is_instance_valid(slot):
+		return false
+		
+	var bm = battle_manager_ref
+	if not is_instance_valid(bm): return false
+	
+	# --- LÓGICA DE PRIORIDADE ATUALIZADA ---
+	# Criaturas e Terrenos SÓ podem ser jogados no nosso turno,
+	# sem prioridade pendente e fora de combate.
+	if bm.is_opponent_turn or bm.opponent_is_waiting_for_pass:
+		print("Não pode jogar Criatura/Terreno no turno do oponente ou esperando resposta.")
+		return false
+	if bm.current_combat_phase != bm.CombatPhase.NONE:
+		print("Não pode jogar Criatura/Terreno durante o combate.")
+		return false
+	# --- FIM DA LÓGICA ---
+
+	# (Resto da lógica original de custo, tipo de slot, etc.)
+	if bm.player_current_energy < card.energy_cost:
+		print("Energia insuficiente.")
+		return false
+		
+	if (card.card_type == "Criatura" and slot.card_slot_type != "Criatura") or \
+	   (card.card_type == "Terreno" and slot.card_slot_type != "Terreno"):
+		print("Tipo de carta e slot incompatíveis.")
+		return false
+		
+	if card.card_type == "Terreno" and bm.player_played_land_this_turn:
+		print("Já jogou terreno neste turno.")
+		return false
+		
+	bm.player_current_energy -= card.energy_cost
+	if card.card_type == "Terreno":
+		bm.player_played_land_this_turn = true
+	
+	# Atualiza energia visualmente (função do battle_manager)
+	bm.update_energy_labels() 
+	
+	slot.card_in_slot = true
+	card.card_slot_card_is_in = slot
+	
+	emit_signal("card_played", card)
+	return true
+	
+func try_play_spell_no_slot(card: Node2D) -> bool:
+	if not is_instance_valid(card) or not is_instance_valid(battle_manager_ref):
+		return false
+
+	var bm = battle_manager_ref
+
+	# Checagem de Custo
+	if bm.player_current_energy < card.energy_cost:
+		print("Energia insuficiente.")
+		return false
+	
+	# --- LÓGICA DE PRIORIDADE ATUALIZADA ---
+	if card.card_type == "feitiço":
+		# Feitiços: Só no nosso turno, sem esperar resposta, fora de combate
+		if bm.is_opponent_turn or bm.opponent_is_waiting_for_pass:
+			print("Feitiços só podem ser jogados no seu turno, sem esperar resposta.")
+			return false
+		if bm.current_combat_phase != bm.CombatPhase.NONE:
+			print("Feitiços não podem ser jogados durante o combate.")
+			return false
+		# Se for nosso turno e não estivermos esperando, OK
+	
+	elif card.card_type == "Magia Instantânea":
+		# Instantâneas: (Nosso turno E sem esperar) OU (Temos prioridade)
+		var can_play_on_own_turn = not bm.is_opponent_turn and not bm.opponent_is_waiting_for_pass
+		var can_play_as_instant = bm.waiting_for_player_response
+
+		if not (can_play_on_own_turn or can_play_as_instant):
+			print("Não é o momento de jogar uma instantânea.")
+			return false
+		# Se for nosso turno (e não esperando) OU se tivermos prioridade, OK
+	
+	else:
+		return false # Não é um tipo de magia
+	# --- FIM DA LÓGICA ---
+
+	# Se passou, gasta energia e emite o sinal
+	bm.player_current_energy -= card.energy_cost
+	bm.update_energy_labels()
+	emit_signal("spell_cast_initiated", card)
+	return true
+	
+func toggle_attacker(card: Node2D):
+	if selected_attackers.has(card):
+		selected_attackers.erase(card)
+		card.show_attack_indicator(false)
+		emit_signal("card_deselected_for_attack", card)
+	else:
+		selected_attackers.append(card)
+		card.show_attack_indicator(true)
+		emit_signal("card_selected_for_attack", card)
+
+func clear_attacker_selection():
+	for card in selected_attackers:
+		if is_instance_valid(card):
+			card.show_attack_indicator(false)
+	selected_attackers.clear()
+	
 # Verifica se há uma CARTA DO JOGADOR sob o mouse
 func raycast_check_for_card() -> Node2D:
 	var space = get_world_2d().direct_space_state
@@ -306,14 +360,14 @@ func raycast_check_for_card_slot() -> Node2D:
 	
 # Retorna a carta com o maior Z-Index de uma lista de resultados de colisão
 func get_card_with_highest_z_index(cards: Array) -> Node2D:
-	if cards.is_empty(): return null
-	var highest_card: Node2D = null
-	var highest_z = -INF
+	var highest_z_index = -INF
+	var top_card: Node2D = null
 	for item in cards:
-		var c = item.collider
-		if is_instance_valid(c):
-			var p = c.get_parent()
-			if is_instance_valid(p) and p is Node2D and p.z_index > highest_z:
-				highest_z = p.z_index
-				highest_card = p
-	return highest_card
+		var collider = item.collider
+		if is_instance_valid(collider):
+			var card = collider.get_parent() # Assume que o 'collider' é filho da 'card'
+			if is_instance_valid(card) and card.is_in_group("Card"): # Assegure-se que suas cartas tenham o grupo "Card"
+				if card.z_index > highest_z_index:
+					highest_z_index = card.z_index
+					top_card = card
+	return top_card
