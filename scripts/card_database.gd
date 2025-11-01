@@ -12,8 +12,7 @@ const CARDS = {
 	"Início da Peste": [0,0,"Uma criatura alvo ganha o marcador Peste (0/-1, acumula). Para cada marcador Peste em campo invoca o Rato da peste 1/1.", "feitiço",3,0, "res://scripts/abilities/inicio_da_peste.gd"],
 	"Surto da Peste": [0,0,"Destrua até duas criaturas alvo com resistência 2 ou menor.", "feitiço",4,0, "res://scripts/abilities/surto_da_peste.gd"], # NOVO
 	"A Peste": [0,0,"Destrua todas as criaturas. Para cada criatura que foi destruída desta forma, invoque um Rato da Peste 1/1. Só pode ser usada se, um Rato da Peste   ou marcador Peste, estiver em campo.", "feitiço",8,0, "res://scripts/abilities/a_peste.gd"], # NOVO
-	"Maçã Caindo": [0,0,"Causa 2 de dano a criatura alvo", "Magia Instantânea", 1, 0, "res://scripts/abilities/maça_caindo.gd"],
-	
+
 	# Adicione mais cartas e seus atributos aqui
 }
 
@@ -30,6 +29,5 @@ const CARD_IMAGE_PATHS = {
 	"Início da Peste":"res://assets/ArtCards/Inicio da peste.png",
 	"Surto da Peste":"res://assets/ArtCards/SurtoDaPeste.png",
 	"A Peste":"res://assets/ArtCards/A Peste.png",
-	"Maçã Caindo":"res://assets/ArtCards/maça_caindo.png",
 	
 }

@@ -128,11 +128,3 @@ func update_health_from_counters():
 	if current_health <= 0:
 		defeated = true
 	update_details_popup_if_visible() # ATUALIZA O POPUP AQUI
-	
-func take_damage(amount: int):
-	current_health = max(0, current_health - amount)
-	attribute2_label.text = str(current_health)
-	if current_health <= 0:
-		defeated = true
-	update_details_popup_if_visible()
-	return

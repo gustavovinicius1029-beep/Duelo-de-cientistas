@@ -32,11 +32,11 @@ func _ready() -> void:
 	await get_tree().process_frame
 	var field_node = get_parent().get_parent()
 	if not is_instance_valid(field_node) or not (field_node.name == "1" or field_node.name == "2"):
-		print(self.name + " Error in _ready(): Could not determine player field node. Path attempted: " + str(get_path()))
+		printerr(self.name + " Error in _ready(): Could not determine player field node. Path attempted: " + str(get_path()))
 		# Attempting alternative path assuming CardManager might be under Main/[1 or 2] directly
 		field_node = get_parent()
 		if not is_instance_valid(field_node) or not (field_node.name == "1" or field_node.name == "2"):
-			print(self.name + " Error in _ready(): Still could not determine player field node. Final path attempted: " + str(get_path()))
+			printerr(self.name + " Error in _ready(): Still could not determine player field node. Final path attempted: " + str(get_path()))
 			return # Cannot proceed without finding the field node
 	var my_field_id = field_node.name
 	var opponent_field_id = "2" if my_field_id == "1" else "1"
@@ -45,9 +45,9 @@ func _ready() -> void:
 	player_hand_ref = get_node_or_null(my_field_path + "/PlayerHand")
 	opponent_hand_ref = get_node_or_null(opponent_field_path + "/OpponentHand")
 	if not is_instance_valid(player_hand_ref):
-		print(self.name + " Error in _ready(): PlayerHand node not found at " + my_field_path + "/PlayerHand")
+		printerr(self.name + " Error in _ready(): PlayerHand node not found at " + my_field_path + "/PlayerHand")
 	if not is_instance_valid(opponent_hand_ref):
-		print(self.name + " Error in _ready(): OpponentHand node not found at " + opponent_field_path + "/OpponentHand")
+		printerr(self.name + " Error in _ready(): OpponentHand node not found at " + opponent_field_path + "/OpponentHand")
 	if hover_timer:
 		hover_timer.timeout.connect(_on_hover_timer_timeout)
 

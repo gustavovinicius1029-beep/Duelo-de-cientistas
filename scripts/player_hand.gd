@@ -44,7 +44,7 @@ func return_hand_to_deck() -> Array[String]:
 			card_names.append(card.card_name)
 			card.queue_free() # Remove o nó da carta da cena
 		else:
-			print("Aviso: Tentando retornar carta inválida da mão.") # Log de aviso
+			printerr("Aviso: Tentando retornar carta inválida da mão.") # Log de aviso
 	cards_in_hand.clear() # Limpa o array de referências da mão
 	print("Mão retornada ao deck. Nomes: ", card_names)
 	return card_names
@@ -59,8 +59,8 @@ func _on_card_left_hand(card: Node2D):
 func _on_card_drag_finished(card: Node2D, target_slot: Node2D):
 	if not is_instance_valid(target_slot) and card.card_type != "feitiço" and cards_in_hand.has(card):
 		animate_card_to_position(card, card.hand_position, Constants.DEFAULT_CARD_MOVE_SPEED)
-	elif not is_instance_valid(target_slot) and card.card_type != "feitiço" and card.card_type != "Magia Instantânea" and not cards_in_hand.has(card):
-		print("Aviso _on_card_drag_finished: Carta ", card.card_name, " retornando para a mão, mas não estava no array cards_in_hand.")
+	elif not is_instance_valid(target_slot) and card.card_type != "feitiço" and not cards_in_hand.has(card):
+		printerr("Aviso _on_card_drag_finished: Carta ", card.card_name, " retornando para a mão, mas não estava no array cards_in_hand.")
 		add_card_to_hand(card, Constants.DEFAULT_CARD_MOVE_SPEED)
 		
 func add_card_to_hand(card: Node2D, speed: float = Constants.DEFAULT_CARD_MOVE_SPEED):

@@ -47,7 +47,7 @@ func draw_card():
 func rpc_perform_mulligan_draw(returned_card_names: Array):
 	print("RPC: Jogador ", get_parent().name, " realizando Mulligan.") # ID adicionado
 	if not is_instance_valid(player_hand_ref):
-		print("Erro Mulligan Draw: Referência inválida para PlayerHand.")
+		printerr("Erro Mulligan Draw: Referência inválida para PlayerHand.")
 		return
 	for card_name in returned_card_names:
 		synced_deck_list.append(card_name)
@@ -59,7 +59,7 @@ func rpc_perform_mulligan_draw(returned_card_names: Array):
 	var hand_size = returned_card_names.size() # Compra o mesmo número que devolveu
 	print("Comprando nova mão de ", hand_size, " cartas.")
 	if not is_multiplayer_authority():
-		print("ERRO FATAL: Tentando executar rpc_perform_mulligan_draw sem autoridade!")
+		printerr("ERRO FATAL: Tentando executar rpc_perform_mulligan_draw sem autoridade!")
 		return
 	for i in range(hand_size):
 		if synced_deck_list.is_empty():

@@ -32,7 +32,7 @@ func _ready() -> void:
 	if is_instance_valid(opponent_deck_ref):
 		opponent_deck_ref.card_drawn.connect(_on_opponent_card_drawn)
 	else:
-		print("OpponentHand: OpponentDeck não encontrado.")
+		printerr("OpponentHand: OpponentDeck não encontrado.")
 
 func _on_opponent_card_drawn(card: Node2D):
 	# Chamada quando OpponentDeck emite card_drawn

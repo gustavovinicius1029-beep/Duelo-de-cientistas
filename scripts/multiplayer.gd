@@ -24,12 +24,13 @@ var opponent_peer_id = 0
 
 var deck_1_list: Array[String] = [
 	
-	"Maçã Caindo","Maçã Caindo","Maçã Caindo","Maçã Caindo","Maçã Caindo","Maçã Caindo",
-	"Trinity College","Trinity College","Trinity College","Trinity College",
-	"Trinity College","Trinity College","Trinity College","Trinity College",
-	"Maçã Caindo","Maçã Caindo","Maçã Caindo","Maçã Caindo","Maçã Caindo",
+	
+	"Rato da Peste","Membro da Royal Society","Guardião da Casa da Moeda",
+	"Disco de Newton", "Canhão de Newton","Rato da Peste",
 	"Membro da Royal Society","Guardião da Casa da Moeda","Disco de Newton", 
 	"Canhão de Newton",
+	"Trinity College","Trinity College","Trinity College","Trinity College","Trinity College",
+	"Trinity College","Woolsthorpe Manor","Woolsthorpe Manor","Woolsthorpe Manor","Woolsthorpe Manor","Woolsthorpe Manor","Woolsthorpe Manor","Início da Peste","Início da Peste","Início da Peste","Início da Peste","Início da Peste","Início da Peste","Surto da Peste","Surto da Peste","Surto da Peste","Surto da Peste","A Peste","A Peste","A Peste","A Peste",
 ]
 
 var deck_2_list: Array[String] = [
@@ -38,8 +39,7 @@ var deck_2_list: Array[String] = [
 	"Membro da Royal Society","Guardião da Casa da Moeda","Disco de Newton", 
 	"Canhão de Newton",
 	"Trinity College","Trinity College","Trinity College","Trinity College","Trinity College",
-	"Trinity College","Trinity College","Trinity College","Trinity College","Trinity College",
-
+	"Trinity College","Woolsthorpe Manor","Woolsthorpe Manor","Woolsthorpe Manor","Woolsthorpe Manor","Woolsthorpe Manor","Woolsthorpe Manor","Início da Peste","Início da Peste","Início da Peste","Início da Peste","Início da Peste","Início da Peste","Surto da Peste","Surto da Peste","Surto da Peste","Surto da Peste","A Peste","A Peste","A Peste","A Peste",
 	
 ]
 
@@ -311,7 +311,7 @@ func _on_mulligan_button_pressed():
 	var player_hand = get_node_or_null(player_hand_path)
 	var player_deck = get_node_or_null(player_deck_path)
 	if not is_instance_valid(player_hand) or not is_instance_valid(player_deck):
-		print("Erro crítico ao obter nós em _on_mulligan_button_pressed")
+		printerr("Erro crítico ao obter nós em _on_mulligan_button_pressed")
 		if not local_player_mulligan_decision_made:
 			_set_local_decision_and_notify(false)
 		return
@@ -353,6 +353,6 @@ func check_both_players_ready():
 					bm_host.rpc_id(1, "start_turn", "Jogador")
 					bm_client.rpc_id(opponent_peer_id, "start_turn", "Oponente")
 				else:
-					print("Erro CRÍTICO check_both_players_ready: BattleManagers não encontrados.")
+					printerr("Erro CRÍTICO check_both_players_ready: BattleManagers não encontrados.")
 	else:
 		print(multiplayer.get_unique_id(), ": Aguardando ambos os jogadores manterem a mão...")
