@@ -20,34 +20,41 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -68.45688
-offset_top = -74.66603
-offset_right = 68.45688
-offset_bottom = 74.66603
+offset_left = -82.45688
+offset_top = -89.93586
+offset_right = 82.45688
+offset_bottom = 89.93586
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxTexture_3claw")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer"]
-layout_mode = 2
-
-[node name="TitleLabel" type="Label" parent="PanelContainer/VBoxContainer"]
+[node name="TitleLabel" type="RichTextLabel" parent="."]
 custom_minimum_size = Vector2(5, 5)
-layout_mode = 2
-theme_override_colors/font_color = Color(0.21568628, 0.09411765, 0.023529412, 1)
-theme_override_font_sizes/font_size = 13
+layout_mode = 0
+offset_left = -74.416534
+offset_top = -91.19787
+offset_right = 90.49722
+offset_bottom = -69.19787
+theme_override_colors/default_color = Color(0.13680702, 0.05601003, 0.02084515, 1)
+theme_override_font_sizes/normal_font_size = 15
+theme_override_font_sizes/bold_font_size = 15
+bbcode_enabled = true
 text = "Atropelar"
 horizontal_alignment = 1
 vertical_alignment = 1
-autowrap_mode = 2
 
-[node name="DescriptionLabel" type="Label" parent="PanelContainer/VBoxContainer"]
+[node name="DescriptionLabel" type="RichTextLabel" parent="."]
 custom_minimum_size = Vector2(100, 25)
-layout_mode = 2
+layout_mode = 0
+offset_left = -62.755707
+offset_top = -69.05635
+offset_right = 61.417847
+offset_bottom = 66.06413
 size_flags_horizontal = 4
-theme_override_colors/font_color = Color(0.41960785, 0.23921569, 0.14117648, 1)
-theme_override_font_sizes/font_size = 8
+theme_override_colors/default_color = Color(0.33459592, 0.22473925, 0.13604727, 1)
+theme_override_font_sizes/normal_font_size = 10
+theme_override_font_sizes/bold_font_size = 10
+bbcode_enabled = true
 text = "Se esta criatura causar dano de combate suficiente para destruir seu bloqueador, ela causa o resto de seu dano ao General Oponente."
 horizontal_alignment = 1
 vertical_alignment = 1
-autowrap_mode = 2

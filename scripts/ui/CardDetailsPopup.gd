@@ -37,11 +37,12 @@ func show_popup(card_data: Dictionary):
 	attack_sprite.visible = false
 	health_sprite.visible = false
 	description_rich_text.visible = false
-	var card_keywords = card_data.get("keywords", [])
-	for keyword in card_keywords:
-		print("keyword2")
-		if card_database_ref.KEYWORD_RULES.has(keyword):
-			var rule_text = card_database_ref.KEYWORD_RULES[keyword]
+	
+
+	for keyword in card_database_ref.KEYWORD_DESCRIPTIONS.keys():
+		print("recebi")
+		if card_data.get("keywords") != []:
+			var rule_text = card_database_ref.KEYWORD_DESCRIPTIONS[keyword]
 			var keyword_popup_instance = KEYWORD_POPUP_SCENE.instantiate()
 			keyword_container.add_child(keyword_popup_instance)
 			keyword_popup_instance.show_popup(keyword.capitalize(), rule_text)
