@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3 uid="uid://tbe00hjr5q63"]
+[gd_scene load_steps=13 format=3 uid="uid://tbe00hjr5q63"]
 
 [ext_resource type="Script" uid="uid://bfun1cur26iea" path="res://scripts/battle_manager.gd" id="1_8ekmn"]
 [ext_resource type="Script" uid="uid://7ikv67lbs1gk" path="res://scripts/CardManager.gd" id="2_tixef"]
@@ -8,7 +8,8 @@
 [ext_resource type="Script" uid="uid://fvjuii13avah" path="res://scripts/input_manager.gd" id="6_v1vsp"]
 [ext_resource type="PackedScene" uid="uid://dvuc35rh86bx5" path="res://scenes/card_slot.tscn" id="7_qbk65"]
 [ext_resource type="Script" uid="uid://c3fe3x00fn2qk" path="res://scripts/land_card_slot.gd" id="8_8fuj6"]
-[ext_resource type="Texture2D" uid="uid://df88e3235ytw0" path="res://assets/CardSlot.png" id="9_pnh2f"]
+[ext_resource type="Script" uid="uid://5xopoltkuhv4" path="res://scripts/Graveyard.gd" id="9_rpubd"]
+[ext_resource type="Texture2D" uid="uid://bkgfcwy0eesjm" path="res://assets/graveyardImage.png" id="10_rpubd"]
 [ext_resource type="Script" uid="uid://cntwrvt56vwxd" path="res://scripts/vfx/CombatLineDrawer.gd" id="10_xhjue"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_buj2l"]
@@ -149,14 +150,6 @@ offset_bottom = 741.0
 scale = Vector2(2, 2)
 text = "0"
 
-[node name="PlayerDiscard" type="Node2D" parent="."]
-position = Vector2(1560, 525)
-scale = Vector2(0.6, 0.6)
-
-[node name="PlayerDiscardImage" type="Sprite2D" parent="PlayerDiscard"]
-scale = Vector2(0.8240725, 0.78057265)
-texture = ExtResource("9_pnh2f")
-
 [node name="ConfirmActionButton" type="Button" parent="."]
 visible = false
 offset_left = 49.0
@@ -170,3 +163,31 @@ text = "Confirmar Alvos"
 [node name="CombatLineDrawer" type="Node2D" parent="."]
 z_index = 6
 script = ExtResource("10_xhjue")
+
+[node name="Graveyard" type="Node2D" parent="."]
+position = Vector2(150, 775)
+script = ExtResource("9_rpubd")
+
+[node name="GraveyardImage" type="Sprite2D" parent="Graveyard"]
+scale = Vector2(0.37438178, 0.35461956)
+texture = ExtResource("10_rpubd")
+
+[node name="CountLabel" type="Label" parent="Graveyard"]
+modulate = Color(0.003921569, 0, 0.07058824, 1)
+offset_left = -18.0
+offset_top = -17.0
+offset_right = 8.0
+offset_bottom = 16.0
+theme_override_font_sizes/font_size = 23
+horizontal_alignment = 1
+vertical_alignment = 1
+uppercase = true
+
+[node name="Area2D" type="Area2D" parent="Graveyard"]
+collision_layer = 16
+collision_mask = 0
+input_pickable = false
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="Graveyard/Area2D"]
+visible = false
+polygon = PackedVector2Array(-23, 16, -35, 20, -36, 27, -43, 27, -43, 32, 43, 33, 43, 28, 37, 27, 35, 19, 22, 15, 22, -19, 10, -31, -12, -32, -22, -20)

@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3 uid="uid://bukfa1lhko0lq"]
+[gd_scene load_steps=18 format=3 uid="uid://bukfa1lhko0lq"]
 
 [ext_resource type="Texture2D" uid="uid://dikhuc71e83ib" path="res://assets/CartaFundo.png" id="1_kikvd"]
 [ext_resource type="Script" uid="uid://cxuenp7jhcv4x" path="res://scripts/card.gd" id="1_rjlel"]
@@ -7,6 +7,7 @@
 [ext_resource type="Texture2D" uid="uid://b17cnmhjrnwrp" path="res://assets/sword_icon.png" id="5_6ligt"]
 [ext_resource type="Texture2D" uid="uid://dpellvs6qscnf" path="res://assets/shield_icon.png" id="6_8w5pg"]
 [ext_resource type="PackedScene" uid="uid://bsbfgjtio3fqd" path="res://scenes/ui/CardDetailsPopup.tscn" id="7_8w5pg"]
+[ext_resource type="Texture2D" uid="uid://cfwvrft1bv2km" path="res://assets/VFX/RetroCatsFree.png" id="8_nvopj"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_ig7tw"]
 size = Vector2(142, 202)
@@ -278,6 +279,42 @@ _data = {
 &"card_flip": SubResource("Animation_ktuci")
 }
 
+[sub_resource type="AtlasTexture" id="AtlasTexture_1yd6c"]
+atlas = ExtResource("8_nvopj")
+region = Rect2(0, 0, 64, 59)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_we8pq"]
+atlas = ExtResource("8_nvopj")
+region = Rect2(64, 0, 64, 59)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_4wvaf"]
+atlas = ExtResource("8_nvopj")
+region = Rect2(128, 0, 64, 59)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_u8dfr"]
+atlas = ExtResource("8_nvopj")
+region = Rect2(192, 0, 64, 59)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_hpf3o"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_1yd6c")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_we8pq")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_4wvaf")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_u8dfr")
+}],
+"loop": true,
+"name": &"zzz",
+"speed": 4.0
+}]
+
 [node name="Card" type="Node2D"]
 texture_filter = 2
 scale = Vector2(0.6, 0.6)
@@ -307,6 +344,7 @@ offset_top = -101.0
 offset_right = 0.5
 offset_bottom = -0.5
 scale = Vector2(2, 2)
+mouse_filter = 2
 text = "0"
 vertical_alignment = 2
 
@@ -317,6 +355,7 @@ offset_left = -70.0
 offset_top = -101.0
 offset_bottom = 0.33332825
 scale = Vector2(2, 2)
+mouse_filter = 2
 text = "0"
 horizontal_alignment = 2
 vertical_alignment = 2
@@ -328,6 +367,7 @@ offset_left = -71.66667
 offset_top = -100.0
 offset_right = -0.8333359
 scale = Vector2(2, 2)
+mouse_filter = 2
 text = "0"
 
 [node name="EnergyGenLabel" type="RichTextLabel" parent="."]
@@ -338,6 +378,7 @@ offset_left = -71.66667
 offset_top = -100.0
 offset_right = -0.8333359
 scale = Vector2(2, 2)
+mouse_filter = 2
 text = "+0 E"
 horizontal_alignment = 1
 vertical_alignment = 2
@@ -376,7 +417,28 @@ one_shot = true
 [node name="CardDetailsPopup" parent="." instance=ExtResource("7_8w5pg")]
 visible = false
 z_index = 5
-position = Vector2(35, 36.666664)
+offset_left = 35.0
+offset_top = 36.666664
+offset_right = 35.0
+offset_bottom = 36.666664
+
+[node name="SicknessIndicator" type="AnimatedSprite2D" parent="."]
+visible = false
+z_index = 7
+scale = Vector2(2.2316384, 2.2316384)
+sprite_frames = SubResource("SpriteFrames_hpf3o")
+animation = &"zzz"
+frame_progress = 0.5229487
+
+[node name="SicknessOverlay" type="ColorRect" parent="."]
+visible = false
+z_index = 6
+offset_left = -69.288315
+offset_top = -98.51733
+offset_right = 68.04288
+offset_bottom = 98.339424
+mouse_filter = 2
+color = Color(0, 0, 0, 0.78431374)
 
 [connection signal="mouse_entered" from="Area2D" to="." method="_on_area_2d_mouse_entered"]
 [connection signal="mouse_exited" from="Area2D" to="." method="_on_area_2d_mouse_exited"]

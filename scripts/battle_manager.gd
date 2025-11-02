@@ -10,14 +10,16 @@ var player_deck
 var card_manager
 var player_health_label
 var opponent_health_label
-var player_discard
-var opponent_discard
 var player_energy_label
 var opponent_energy_label
 var confirm_action_button
 var player_slots_container
 var input_manager_ref
 var combat_line_drawer_ref: Node2D
+var graveyard_ref
+var opponent_graveyard_ref
+var card_manager_ref
+var opponent_card_manager_ref
 
 const CARD_SCENE_PATH = "res://scenes/card.tscn"
 var card_scene = preload(CARD_SCENE_PATH)
@@ -30,10 +32,10 @@ var card_database_ref = preload("res://scripts/card_database.gd")
 
 var player_health: int = Constants.INITIAL_PLAYER_HEALTH
 var opponent_health: int = Constants.INITIAL_PLAYER_HEALTH
-var player_max_energy: int = 1 # Removido? Usando player_lands_in_play
-var player_current_energy: int = 1
-var opponent_max_energy: int = 1 # Removido? Usando opponent_lands_in_play
-var opponent_current_energy: int = 1
+var player_max_energy: int = 0 # Removido? Usando player_lands_in_play
+var player_current_energy: int = 0
+var opponent_max_energy: int = 0 # Removido? Usando opponent_lands_in_play
+var opponent_current_energy: int = 0
 var turns: int = 0
 
 var player_lands_in_play: int = 0
@@ -96,16 +98,18 @@ func _ready():
 	player_deck = local_parent.get_node("Deck")
 	card_manager = local_parent.get_node("CardManager")
 	player_health_label = local_parent.get_node("PlayerHealthLabel")
-	player_discard = local_parent.get_node("PlayerDiscard")
 	player_energy_label = local_parent.get_node("PlayerEnergyLabel")
 	confirm_action_button = local_parent.get_node("ConfirmActionButton") # !! RENOMEIE NA CENA para "ConfirmActionButton" !!
 	player_slots_container = local_parent.get_node("PlayerCardSlots")
 	input_manager_ref = local_parent.get_node("InputManager")
-
+	card_manager_ref = local_parent.get_node("CardManager")
+	graveyard_ref = local_parent.get_node("Graveyard")
+	
+	opponent_card_manager_ref = local_parent.get_node("CardManager")
+	opponent_graveyard_ref = get_node(opponent_path + "/OpponentGraveyard")
 	opponent_deck = get_node(opponent_path + "/Deck")
 	opponent_hand = get_node(opponent_path + "/OpponentHand")
 	opponent_health_label = get_node(opponent_path + "/OpponentHealthLabel")
-	opponent_discard = get_node(opponent_path + "/OpponentDiscard")
 	opponent_energy_label = get_node(opponent_path + "/OpponentEnergyLabel")
 
 	update_health_labels()
@@ -149,7 +153,7 @@ func _ready():
 				opponent_land_slots_ref.append(slot)
 	else:
 		printerr("BattleManager: OpponentCardSlots não encontrado.")
-
+	
 	update_ui_for_phase()
 
 func set_current_combat_phase(new_phase: CombatPhase) -> void:
@@ -205,6 +209,8 @@ func _on_spell_cast_initiated(spell_card: Node2D):
 		reset_targeting_state()
 
 func _on_player_card_clicked(card: Node2D):
+	if "is_in_viewer_mode" in card and card.is_in_viewer_mode:
+		return
 	if current_combat_phase == CombatPhase.DECLARE_BLOCKERS and is_instance_valid(card) and player_cards_on_battlefield.has(card):
 		if is_opponent_turn:
 			handle_blocker_declaration_click(card)
@@ -360,12 +366,18 @@ func start_turn(player_or_opponent: String):
 		player_played_land_this_turn = false
 		player_current_energy = player_lands_in_play
 		player_cards_that_attacked_this_turn.clear()
+		for card in player_cards_on_battlefield:
+			if is_instance_valid(card) and card.card_type == "Criatura":
+				card.set_has_summoning_sickness(false)
 		update_energy_labels()
 		if is_instance_valid(player_deck): player_deck.reset_draw()
 	elif player_or_opponent == "Oponente":
 		is_opponent_turn = true
 		opponent_played_land_this_turn = false
 		opponent_current_energy = opponent_lands_in_play
+		for card in opponent_cards_on_battlefield:
+			if is_instance_valid(card) and card.card_type == "Criatura":
+				card.set_has_summoning_sickness(false)
 		update_energy_labels()
 
 	update_ui_for_phase()
@@ -617,7 +629,7 @@ func resolve_combat_damage(blocker_assignments_override: Dictionary = {}):
 	
 func handle_blocker_declaration_click(clicked_card: Node2D):
 
-	if player_cards_on_battlefield.has(clicked_card) and clicked_card.card_type == "Criatura":
+	if player_cards_on_battlefield.has(clicked_card) and clicked_card.card_type == "Criatura" and not clicked_card.has_summoning_sickness:
 		var potential_blocker = clicked_card
 		var can_select = not blocker_assignments.has(potential_blocker) or currently_selected_blocker == potential_blocker
 		if not can_select:
@@ -726,19 +738,21 @@ func rpc_opponent_played_card(card_name: String, card_type: String, slot_index: 
 
 	card_to_play.name = "OppCard_" + card_name.replace(" ", "_")
 	card_to_play.card_name = card_name
-
-	var card_data = card_database_ref.CARDS[card_name]
-	card_to_play.attack = card_data[0]
-	card_to_play.base_health = card_data[1]
-	card_to_play.current_health = card_data[1]
-	card_to_play.description = card_data[2]
-	card_to_play.card_type = card_data[3]
-	card_to_play.energy_cost = card_data[4]
-	card_to_play.energy_generation = card_data[5]
-
-	var card_image_path = card_database_ref.CARD_IMAGE_PATHS[card_name]
-	card_to_play.set_card_image_texture(card_image_path)
 	
+	var card_data = card_database_ref.CARDS[card_name]
+	
+	card_to_play.attack = card_data["ataque"]
+	card_to_play.base_health = card_data["vida"]
+	card_to_play.current_health = card_data["vida"] # Vida atual começa igual à base
+	card_to_play.description = card_data["desc"]
+	card_to_play.card_type = card_data["tipo"]
+	card_to_play.energy_cost = card_data["custo_energy"]
+	card_to_play.energy_generation = card_data["gera_energy"]
+	var ability_script_path = card_data["habilidade_path"]
+	if ability_script_path != null:
+		card_to_play.ability_script = load(ability_script_path).new()
+	var card_image_path = card_data["art_path"]
+	card_to_play.set_card_image_texture(card_image_path)
 	card_to_play.card_data_ref = {
 	"name": card_name,
 	"attack": card_to_play.attack,
@@ -766,6 +780,8 @@ func rpc_opponent_played_card(card_name: String, card_type: String, slot_index: 
 		card_to_play.animation_player.play("card_flip")
 		await card_to_play.animation_player.animation_finished
 	card_to_play.setup_card_display()
+	if card_to_play.card_type == "Criatura":
+		card_to_play.set_has_summoning_sickness(true)
 
 @rpc("any_peer")
 func rpc_receive_attack(attacker_slot_index: int, defender_slot_index: int):
@@ -803,7 +819,8 @@ func rpc_receive_direct_attack(attacker_slot_index: int):
 func rpc_opponent_cast_targeted_spell(spell_name: String, target_data_array: Array):
 	if not card_database_ref.CARDS.has(spell_name): return
 	var card_data = card_database_ref.CARDS[spell_name]
-	var energy_cost = card_data[4]; var ability_path = card_data[6]
+	var energy_cost = card_data["custo_energy"]
+	var ability_path = card_data["habilidade_path"]
 	if ability_path == null: return
 
 	opponent_current_energy -= energy_cost; update_energy_labels()
@@ -813,7 +830,7 @@ func rpc_opponent_cast_targeted_spell(spell_name: String, target_data_array: Arr
 		if is_instance_valid(card_manager): card_manager.add_child(fake_spell_card)
 		else: printerr("ERRO RPC target spell: CardManager inválido."); fake_spell_card.queue_free(); return
 		fake_spell_card.visible = false
-
+	fake_spell_card.card_name = spell_name
 	var local_target_nodes = []
 	for target_data in target_data_array:
 		var target_node = null; var target_owner = target_data["owner"]; var target_slot_index = target_data["slot_index"]
@@ -823,12 +840,12 @@ func rpc_opponent_cast_targeted_spell(spell_name: String, target_data_array: Arr
 
 	var ability_script = load(ability_path).new()
 	await ability_script.trigger_ability(self, local_target_nodes, fake_spell_card, "Oponente")
-	
+
 @rpc("any_peer")
 func rpc_opponent_cast_global_spell(spell_name: String):
 	if not card_database_ref.CARDS.has(spell_name): printerr("ERRO RPC global spell: Feitiço desconhecido: ", spell_name); return
 	var card_data = card_database_ref.CARDS[spell_name]
-	var energy_cost = card_data[4]; var ability_path = card_data[6]
+	var energy_cost = card_data["custo_energy"]; var ability_path = card_data["habilidade_path"]
 	if ability_path == null: printerr("ERRO RPC global spell: Sem script: ", spell_name); return
 
 	opponent_current_energy -= energy_cost; update_energy_labels()
@@ -838,10 +855,11 @@ func rpc_opponent_cast_global_spell(spell_name: String):
 		if is_instance_valid(card_manager): card_manager.add_child(fake_spell_card)
 		else: printerr("ERRO RPC global spell: CardManager inválido."); fake_spell_card.queue_free(); return
 		fake_spell_card.visible = false
-
+	fake_spell_card.card_name = spell_name
 	var ability_script = load(ability_path).new()
 	await ability_script.trigger_ability(self, fake_spell_card, "Oponente") # Passa a carta fake
 
+	
 @rpc("any_peer")
 func rpc_declare_attackers(attacker_indices: Array[int]):
 	print("RPC Recebido: Atacantes declarados nos índices: ", attacker_indices)
@@ -909,8 +927,8 @@ func destroy_card(card_to_destroy: Node2D, card_owner: String):
 		if is_instance_valid(card_manager): card_manager.add_child(vfx)
 		else: get_tree().root.add_child(vfx) # Fallback
 
-	var discard_node = player_discard if card_owner == "Jogador" else opponent_discard
-	var discard_pos = discard_node.global_position if is_instance_valid(discard_node) else Vector2(0, -200) # Posição fallback
+	var graveyard_node = graveyard_ref if card_owner == "Jogador" else opponent_graveyard_ref
+	var graveyard_pos = graveyard_node.global_position if is_instance_valid(graveyard_node) else Vector2(0, -200) # Posição fallback
 
 	# Remove dos arrays de controle
 	if card_owner == "Jogador":
@@ -936,7 +954,8 @@ func destroy_card(card_to_destroy: Node2D, card_owner: String):
 	if card_to_destroy.has_method("set_defeated"): card_to_destroy.set_defeated(true)
 
 	# Anima para o descarte e remove
-	await animate_card_to_position_and_scale(card_to_destroy, discard_pos, Constants.CARD_SMALLER_SCALE, 0.2)
+	await animate_card_to_position_and_scale(card_to_destroy, graveyard_pos, Constants.CARD_DESTROY_SCALE, 0.2)
+	graveyard_node.rpc_add_card(card_to_destroy.card_name)
 	card_to_destroy.queue_free() # Remove a carta da cena
 
 # --- Funções de Ataque (para efeitos ou IA, NÃO para combate normal) ---
@@ -1210,17 +1229,20 @@ func summon_token(card_name: String, card_owner: String):
 	if is_instance_valid(card_manager): card_manager.add_child(new_card)
 	else: get_tree().root.add_child(new_card); printerr("ERRO summon_token: CardManager inválido.") # Fallback
 
-	# Preenche dados
 	var card_data = card_database_ref.CARDS[card_name]
-	new_card.attack = card_data[0]; 
-	new_card.base_health = card_data[1]; 
-	new_card.current_health = card_data[1]
-	new_card.description = card_data[2]
-	new_card.card_type = card_data[3]; 
-	new_card.energy_cost = 0; 
-	new_card.energy_generation = card_data[5]
-	var card_image_path = card_database_ref.CARD_IMAGE_PATHS[card_name]
+	new_card.attack = card_data["ataque"]
+	new_card.base_health = card_data["vida"]
+	new_card.current_health = card_data["vida"] # Vida atual começa igual à base
+	new_card.description = card_data["desc"]
+	new_card.card_type = card_data["tipo"]
+	new_card.energy_cost = card_data["custo_energy"]
+	new_card.energy_generation = card_data["gera_energy"]
+	var ability_script_path = card_data["habilidade_path"]
+	if ability_script_path != null:
+		new_card.ability_script = load(ability_script_path).new()
+	var card_image_path = card_data["art_path"]
 	new_card.set_card_image_texture(card_image_path)
+
 
 	new_card.card_data_ref = {
 	"name": card_name,
@@ -1248,6 +1270,7 @@ func summon_token(card_name: String, card_owner: String):
 	new_card.card_slot_card_is_in = empty_slot
 	if card_owner == "Jogador": player_cards_on_battlefield.append(new_card)
 	else: opponent_cards_on_battlefield.append(new_card)
+	new_card.set_has_summoning_sickness(true)
 
 	# Desabilita colisão do slot
 	var slot_area = empty_slot.get_node_or_null("Area2D")

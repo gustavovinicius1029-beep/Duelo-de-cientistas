@@ -10,6 +10,8 @@ extends Node2D
 @onready var block_indicator: Sprite2D = $BlockIndicator
 @onready var hover_timer = $HoverTimer
 @onready var details_popup = $CardDetailsPopup
+@onready var sickness_indicator = $SicknessIndicator
+@onready var sickness_overlay = $SicknessOverlay
 
 const HOVER_POPUP_OFFSET = Vector2(80, -120)
 var card_data_ref: Dictionary = {} # Para guardar todos os dados da carta
@@ -27,6 +29,7 @@ var current_health: int = 0 # NOVO: Vida atual
 var plague_counters: int = 0 # NOVO: Marcadores de Peste
 var player_hand_ref
 var opponent_hand_ref
+var has_summoning_sickness: bool = false
 
 func _ready() -> void:
 	await get_tree().process_frame
@@ -124,3 +127,14 @@ func update_health_from_counters():
 	if current_health <= 0:
 		defeated = true
 	update_details_popup_if_visible() # ATUALIZA O POPUP AQUI
+
+func set_has_summoning_sickness(value: bool):
+	has_summoning_sickness = value
+	if is_instance_valid(sickness_indicator):
+		sickness_indicator.visible = value
+		if value:
+			sickness_indicator.play("zzz") # Use "zzz" se você renomeou
+		else:
+			sickness_indicator.stop()
+	if is_instance_valid(sickness_overlay):
+		sickness_overlay.visible = value

@@ -4,6 +4,8 @@ signal player_card_clicked(card: Node2D)
 signal opponent_card_clicked(card: Node2D)
 signal player_deck_clicked
 signal empty_space_clicked
+signal player_graveyard_clicked
+signal opponent_graveyard_clicked
 
 signal left_mouse_button_clicked()
 signal left_mouse_button_released()
@@ -74,7 +76,17 @@ func raycast_at_cursor():
 				emit_signal("player_deck_clicked") # EMITIR SINAL
 			else:
 				print("InputManager: Colisão na camada DECK, mas não era o deck do jogador (era ", collider_parent.name, ")") #
+		elif result_collision_layer_mask == Constants.COLLISION_MASK_PLAYER_GRAVEYARD:
+			if collider_parent.has_method("show_contents"):
+				print("InputManager: Clicou no CEMITÉRIO DO JOGADOR.")
+				emit_signal("player_graveyard_clicked")
 
+		# Verifica Camada do Cemitério do Oponente
+		elif result_collision_layer_mask == Constants.COLLISION_MASK_OPPONENT_GRAVEYARD:
+			if collider_parent.has_method("show_contents"):
+				print("InputManager: Clicou no CEMITÉRIO DO OPONENTE.")
+				emit_signal("opponent_graveyard_clicked")
+		
 	else:
-		print("InputManager: Clique no vazio.") #
-		emit_signal("empty_space_clicked") # EMITIR SINAL (Opcional)
+		print("espaço vazio clicado")
+		emit_signal("empty_space_clicked")

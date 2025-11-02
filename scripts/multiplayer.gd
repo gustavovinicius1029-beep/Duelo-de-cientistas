@@ -34,13 +34,8 @@ var deck_1_list: Array[String] = [
 ]
 
 var deck_2_list: Array[String] = [
-	"Rato da Peste","Membro da Royal Society","Guardião da Casa da Moeda",
-	"Disco de Newton", "Canhão de Newton","Rato da Peste",
-	"Membro da Royal Society","Guardião da Casa da Moeda","Disco de Newton", 
-	"Canhão de Newton",
-	"Trinity College","Trinity College","Trinity College","Trinity College","Trinity College",
-	"Trinity College","Woolsthorpe Manor","Woolsthorpe Manor","Woolsthorpe Manor","Woolsthorpe Manor","Woolsthorpe Manor","Woolsthorpe Manor","Início da Peste","Início da Peste","Início da Peste","Início da Peste","Início da Peste","Início da Peste","Surto da Peste","Surto da Peste","Surto da Peste","Surto da Peste","A Peste","A Peste","A Peste","A Peste",
-	
+
+	"Canhão de Newton","Canhão de Newton","Canhão de Newton","Canhão de Newton","Canhão de Newton","Canhão de Newton","Canhão de Newton","Canhão de Newton",
 ]
 
 

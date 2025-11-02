@@ -10,31 +10,26 @@ signal card_drag_finished(card: Node2D, target_slot: Node2D)
 var screen_size: Vector2
 var card_being_dragged: Node2D = null
 var card_being_hovered: Node2D = null
-
-# 2. Definimos elas como variáveis normais
 var player_hand_ref
 var input_manager_ref
 var deck_ref
 var battle_manager_ref
-
-# --- Constantes (sem mudança) ---
-#var selected_monster: Node2D = null
 var selected_attackers: Array[Node2D] = []
+
+var card_clicked_for_drag: Node2D = null 
+var click_start_position: Vector2 = Vector2.ZERO 
+const DRAG_START_THRESHOLD = 10.0
 
 func _ready():
 	await get_tree().process_frame
 
 	var player_id = get_parent().name
 	var player_path = "/root/Main/" + player_id
-
 	player_hand_ref = get_node(player_path + "/PlayerHand")
-	input_manager_ref = get_node(player_path + "/InputManager") # Referência necessária para conectar
+	input_manager_ref = get_node(player_path + "/InputManager")
 	deck_ref = get_node(player_path + "/Deck")
 	battle_manager_ref = get_node(player_path + "/BattleManager")
-
 	screen_size = get_viewport_rect().size
-
-	# Conecta aos sinais do Input Manager
 	if is_instance_valid(input_manager_ref):
 		input_manager_ref.left_mouse_button_released.connect(_on_left_click_released)
 		input_manager_ref.player_card_clicked.connect(_on_player_card_clicked)
@@ -42,22 +37,24 @@ func _ready():
 		print("ERRO: InputManager não encontrado em CardManager.")
 		
 func _process(_delta):
-	# Atualiza a posição da carta sendo arrastada
+	if is_instance_valid(card_clicked_for_drag) and card_being_dragged == null:
+		if get_global_mouse_position().distance_to(click_start_position) > DRAG_START_THRESHOLD:
+			start_drag(card_clicked_for_drag)
+			card_clicked_for_drag = null
 	if card_being_dragged:
+		card_being_dragged.details_popup.hide_popup()
 		card_being_dragged.global_position = get_global_mouse_position()
-	
-	# Gerencia o estado visual de hover a cada frame
 	update_hover_state()
 
-# Inicia o processo de arrastar uma carta (geralmente da mão)
 func start_drag(card_to_drag: Node2D):
+	if "is_in_viewer_mode" in card_to_drag and card_to_drag.is_in_viewer_mode:
+		return
 	clear_attacker_selection()
 	card_being_hovered = null
+	card_clicked_for_drag = null
 	card_being_dragged = card_to_drag
 	card_being_dragged.z_index = 10
-	emit_signal("card_drag_started", card_to_drag) # Emite sinal
-
-# Chamado quando o botão esquerdo do mouse é solto
+	emit_signal("card_drag_started", card_to_drag)
 
 func clear_attacker_selection():
 	# Remove indicadores visuais e limpa a lista
@@ -68,16 +65,15 @@ func clear_attacker_selection():
 	selected_attackers.clear()
 
 func _on_left_click_released():
-	if card_being_dragged:
+	if is_instance_valid(card_being_dragged):
 		finish_drag()
+	card_clicked_for_drag = null
 
 # Finaliza o processo de arrastar e tenta jogar a carta
 func finish_drag():
 	var original_card = card_being_dragged
 	var final_slot = null
-
 	if card_being_dragged:
-		# 1. Verifica Limite de Terreno
 		if card_being_dragged.card_type == "Terreno" and battle_manager_ref.player_played_land_this_turn:
 			player_hand_ref.add_card_to_hand(card_being_dragged, Constants.DEFAULT_CARD_MOVE_SPEED)
 			# Sinal de fim ANTES de resetar
@@ -154,6 +150,7 @@ func finish_drag():
 			if card_being_dragged.card_type == "Criatura": # Certifique-se que é uma criatura
 				battle_manager_ref.player_current_energy -= card_being_dragged.energy_cost # Deduz a energia
 				battle_manager_ref.update_energy_labels() # Atualiza o label imediatamente
+				card_being_dragged.set_has_summoning_sickness(true)
 			# --- FIM DA CORREÇÃO ---
 
 			# Emite sinal indicando que a carta foi jogada com sucesso
@@ -231,6 +228,8 @@ func highlight_card(card: Node2D, hovered: bool):
 		return
 	if card.get_defeated(): return # Não faz nada se derrotada
 	var is_in_slot = card.card_slot_card_is_in != null
+	if "is_in_viewer_mode" in card and card.is_in_viewer_mode:
+		return
 	if hovered:
 		if not is_in_slot:
 			card.scale = Constants.CARD_BIGGER_SCALE
@@ -255,27 +254,54 @@ func reset_turn_limits():
 # Em scripts/CardManager.gd
 
 func _on_player_card_clicked(card: Node2D):
-	var multiplayer_node = get_node_or_null("/root/Main") # Caminho para o nó com multiplayer.gd
+	
+	# --- LÓGICA REESTRUTURADA ---
+
+	# 1. Checagem de modo visualizador (cemitério) - Sempre primeiro
+	if "is_in_viewer_mode" in card and card.is_in_viewer_mode:
+		return
+
+	# 2. Checagem de Jogo (Mulligan) - Sempre segundo
+	var multiplayer_node = get_node_or_null("/root/Main")
 	if not is_instance_valid(multiplayer_node) or not multiplayer_node.game_started:
 		print("Aguardando início do jogo (Mulligan). Clique na carta bloqueado.")
 		return
+		
+	# 3. Lógica de "Fixar" (Pinning) - LOCAL
+	# Verificamos se a carta está no campo
+	if card.card_slot_card_is_in != null:
+		if not is_instance_valid(battle_manager_ref) or \
+		   battle_manager_ref.current_combat_phase != battle_manager_ref.CombatPhase.DECLARE_ATTACKERS:
+			return # Esta era a ação do clique. Fim.
+			
+	# 4. Checagem de Turno/Animação - BLOQUEIA AÇÕES DE JOGO
+	# Se chegamos aqui, não foi um clique para "fixar".
+	# Agora verificamos se podemos fazer ações de jogo (atacar, arrastar).
 	if not is_instance_valid(battle_manager_ref) or battle_manager_ref.is_opponent_turn or battle_manager_ref.player_is_attacking:
+		# Isto agora bloqueia corretamente o Client de arrastar ou atacar,
+		# mas permite que ele "fixe" (passo 3).
 		return
+		
+	# 5. Checagem de Fase: Declarar Atacantes (Ação de Jogo)
 	if battle_manager_ref.current_combat_phase == battle_manager_ref.CombatPhase.DECLARE_ATTACKERS:
 		if card.card_slot_card_is_in != null and card.card_type == "Criatura" \
-		and not battle_manager_ref.player_cards_that_attacked_this_turn.has(card):
+		and not battle_manager_ref.player_cards_that_attacked_this_turn.has(card) \
+		and not card.has_summoning_sickness:
 
 			if selected_attackers.has(card):
 				selected_attackers.erase(card)
 				if card.has_method("show_attack_indicator"): card.show_attack_indicator(false)
-				card.position.y += 20 # Exemplo: move para baixo
+				card.position.y += 20
 			else:
 				selected_attackers.append(card)
 				if card.has_method("show_attack_indicator"): card.show_attack_indicator(true)
-				card.position.y -= 20 # Exemplo: move para cima
+				card.position.y -= 20 
 		return # Impede de arrastar durante esta fase
+
+	# 6. Checagem de Fase: Clicar na Mão (Ação de Jogo)
 	if card.card_slot_card_is_in == null and battle_manager_ref.current_combat_phase == battle_manager_ref.CombatPhase.NONE:
-		start_drag(card)
+		card_clicked_for_drag = card
+		click_start_position = get_global_mouse_position()
 		return
 
 # Verifica se há uma CARTA DO JOGADOR sob o mouse
@@ -317,3 +343,4 @@ func get_card_with_highest_z_index(cards: Array) -> Node2D:
 				highest_z = p.z_index
 				highest_card = p
 	return highest_card
+		

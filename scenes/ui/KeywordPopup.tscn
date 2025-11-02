@@ -1,0 +1,53 @@
+[gd_scene load_steps=4 format=3 uid="uid://c5falnecdamb"]
+
+[ext_resource type="Script" uid="uid://dgywxdus3nybo" path="res://scripts/ui/KeywordPopup.gd" id="1_07x0d"]
+[ext_resource type="Texture2D" uid="uid://s730bexxybrl" path="res://assets/DetalhesDescriçãoNovo.png" id="2_8xo50"]
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_3claw"]
+texture = ExtResource("2_8xo50")
+
+[node name="KeywordPopup" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+size_flags_horizontal = 4
+size_flags_vertical = 4
+script = ExtResource("1_07x0d")
+
+[node name="PanelContainer" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -68.45688
+offset_top = -74.66603
+offset_right = 68.45688
+offset_bottom = 74.66603
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxTexture_3claw")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer"]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="PanelContainer/VBoxContainer"]
+custom_minimum_size = Vector2(5, 5)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.21568628, 0.09411765, 0.023529412, 1)
+theme_override_font_sizes/font_size = 13
+text = "Atropelar"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="DescriptionLabel" type="Label" parent="PanelContainer/VBoxContainer"]
+custom_minimum_size = Vector2(100, 25)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_color = Color(0.41960785, 0.23921569, 0.14117648, 1)
+theme_override_font_sizes/font_size = 8
+text = "Se esta criatura causar dano de combate suficiente para destruir seu bloqueador, ela causa o resto de seu dano ao General Oponente."
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2

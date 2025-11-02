@@ -13,6 +13,8 @@ var hand_position: Vector2
 @onready var block_indicator: Sprite2D = $BlockIndicator
 @onready var hover_timer = $HoverTimer
 @onready var details_popup = $CardDetailsPopup
+@onready var sickness_indicator = $SicknessIndicator
+@onready var sickness_overlay = $SicknessOverlay
 
 const HOVER_POPUP_OFFSET = Vector2(70, -50)
 var card_data_ref: Dictionary = {} # Para guardar todos os dados da carta
@@ -30,10 +32,14 @@ var plague_counters: int = 0 # NOVO: Marcadores de Peste
 var defeated: bool = false
 var player_hand_ref
 var opponent_hand_ref
+var is_in_viewer_mode: bool = false
+var has_summoning_sickness: bool = false
 
 func _ready() -> void:
 	await get_tree().process_frame
 	var field_node = get_parent().get_parent()
+	if hover_timer:
+		hover_timer.timeout.connect(_on_hover_timer_timeout)
 	if not is_instance_valid(field_node) or not (field_node.name == "1" or field_node.name == "2"):
 		printerr(self.name + " Error in _ready(): Could not determine player field node. Path attempted: " + str(get_path()))
 		# Attempting alternative path assuming CardManager might be under Main/[1 or 2] directly
@@ -51,8 +57,7 @@ func _ready() -> void:
 		printerr(self.name + " Error in _ready(): PlayerHand node not found at " + my_field_path + "/PlayerHand")
 	if not is_instance_valid(opponent_hand_ref):
 		printerr(self.name + " Error in _ready(): OpponentHand node not found at " + opponent_field_path + "/OpponentHand")
-	if hover_timer:
-		hover_timer.timeout.connect(_on_hover_timer_timeout)
+	
 
 # Função atualizada para mostrar/esconder labels
 func setup_card_display():
@@ -67,7 +72,6 @@ func setup_card_display():
 		attribute2_label.visible = true
 		cost_label.visible = true
 		energy_gen_label.visible = false
-		# Define os textos (eles são definidos no deck, mas garantimos aqui)
 		attribute1_label.text = str(attack)
 		cost_label.text = str(energy_cost)
 		attribute2_label.text = str(current_health)
@@ -128,3 +132,14 @@ func update_health_from_counters():
 	if current_health <= 0:
 		defeated = true
 	update_details_popup_if_visible() # ATUALIZA O POPUP AQUI
+
+func set_has_summoning_sickness(value: bool):
+	has_summoning_sickness = value
+	if is_instance_valid(sickness_indicator):
+		sickness_indicator.visible = value
+		if value:
+			sickness_indicator.play("zzz") # Use "zzz" se você renomeou
+		else:
+			sickness_indicator.stop()
+	if is_instance_valid(sickness_overlay):
+		sickness_overlay.visible = value

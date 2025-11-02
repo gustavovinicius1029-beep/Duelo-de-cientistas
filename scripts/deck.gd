@@ -81,31 +81,29 @@ func _draw_card_action(card_drawn_name: String):
 
 	# Configura os dados da carta
 	var card_data = card_database_ref.CARDS[card_drawn_name]
-	new_card.attack = card_data[0]
-	new_card.base_health = card_data[1]
-	new_card.current_health = card_data[1]
-	new_card.description = card_data[2]
-	new_card.card_type = card_data[3]
-	new_card.energy_cost = card_data[4]
-	new_card.energy_generation = card_data[5]
-
-	var ability_script_path = card_data[6]
+	
+	# Usando as novas chaves do dicionário
+	new_card.attack = card_data["ataque"]
+	new_card.base_health = card_data["vida"]
+	new_card.current_health = card_data["vida"] # Vida atual começa igual à base
+	new_card.description = card_data["desc"]
+	new_card.card_type = card_data["tipo"]
+	new_card.energy_cost = card_data["custo_energy"]
+	new_card.energy_generation = card_data["gera_energy"]
+	var ability_script_path = card_data["habilidade_path"]
 	if ability_script_path != null:
 		new_card.ability_script = load(ability_script_path).new()
-
-	var card_image_path = card_database_ref.CARD_IMAGE_PATHS[card_drawn_name]
+	var card_image_path = card_data["art_path"]
 	new_card.set_card_image_texture(card_image_path)
-
-
 	new_card.card_data_ref = {
-	"name": card_drawn_name,
-	"attack": new_card.attack,
-	"base_health": new_card.base_health,
-	"current_health": new_card.current_health, # Inclui vida atual
-	"description": new_card.description,
-	"type": new_card.card_type,
-	"cost": new_card.energy_cost,
-	"energy_gen": new_card.energy_generation
+	"name": card_data["nome"],
+	"attack": card_data["ataque"],
+	"base_health": card_data["vida"],
+	"current_health": card_data["vida"], # Inclui vida atual
+	"description": card_data["desc"],
+	"type": card_data["tipo"],
+	"cost": card_data["custo_energy"],
+	"energy_gen": card_data["gera_energy"]
 	}
 
 	# Inicia animação e espera terminar antes de emitir o sinal
