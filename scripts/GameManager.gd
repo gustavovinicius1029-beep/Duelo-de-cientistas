@@ -9,7 +9,6 @@ func goto_main_menu():
 	if multiplayer.get_multiplayer_peer():
 		multiplayer.multiplayer_peer.close()
 	multiplayer.set_multiplayer_peer(null)
-	
 	get_tree().change_scene_to_file("res://scenes/menu.tscn")
 
 # Função para iniciar o jogo (carrega a cena do lobby/multiplayer)

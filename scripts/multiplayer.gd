@@ -7,17 +7,17 @@ extends Node2D
 @onready var host_ip_label = $HostIPLabel
 @onready var keep_hand_button = $KeepHandButton 
 @onready var mulligan_button = $MulliganButton 
-@onready var p1_deck_select: OptionButton = $P1DeckOptionButton
-@onready var p2_deck_select: OptionButton = $P2DeckOptionButton
+@onready var p1_deck_select: OptionButton = $DeckSelectButton
+@onready var deck_text: = $HostIPLabel2
 
 # As cenas que representam os "lados" do campo de batalha
 var player_field_scene = preload("res://scenes/player_field.tscn")
 var opponent_field_scene = preload("res://scenes/opponent_field.tscn")
 var deck_preset_loader = preload("res://scripts/deck_presets.gd").new()
 
-var p1_deck_choice: String = "Newton"
-var p2_deck_choice: String = "Newton"
+var p1_deck_choice: String = ""
 var opponent_peer_id: int = 0
+var opponent_deck_choice: String = ""
 
 var local_player_mulligan_decision_made = false
 var opponent_mulligan_decision_made = false
@@ -32,125 +32,138 @@ func _ready():
 	join_button.pressed.connect(_on_join_button_pressed)
 	keep_hand_button.pressed.connect(_on_keep_hand_button_pressed)
 	mulligan_button.pressed.connect(_on_mulligan_button_pressed)
-	
-	
-	# --- NOVO: Conectar Sinais de Rede ---
-	# Estes sinais nos dirão o estado real da conexão.
-	
-	# LINHA CORRIGIDA: O sinal chama-se 'connected_to_server'
+	host_button.disabled = true
+	join_button.disabled = true
+	_populate_deck_options(p1_deck_select)
+	p1_deck_select.item_selected.connect(_on_deck_selected)
 	multiplayer.connected_to_server.connect(_on_connected_to_server) 
-	
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
-	# --- FIM DA NOVA SEÇÃO ---
 
-# Chamado quando o jogador clica em "Host"
+
+func _populate_deck_options(option_button: OptionButton):
+	if not is_instance_valid(option_button):
+		print("AVISO: OptionButton de deck não encontrado.")
+		return
+	option_button.clear()
+	option_button.add_item("Escolha seu Cientista...")
+	option_button.add_item("Newton")
+	option_button.add_item("Einstein (Em Breve)")
+	option_button.add_item("Marie Curie (Em Breve)") 
+	option_button.set_item_disabled(0, true)
+	option_button.set_item_disabled(2, true)
+	option_button.set_item_disabled(3, true)
+	option_button.select(0)
 
 func _display_host_ip():
 	var local_addresses = IP.get_local_addresses()
 	var host_ip = "IP não encontrado."
-	
-	# Passa por todos os IPs que a máquina possui
 	for ip in local_addresses:
-		# Nós queremos um endereço IPv4 (sem ":")
-		# e que não seja o "localhost" (127.0.0.1)
 		if ip != "127.0.0.1" and not ":" in ip:
 			host_ip = ip
-			break # Pega o primeiro IP de rede local válido que encontrar
-			
+			break
 	if is_instance_valid(host_ip_label):
 		host_ip_label.text = "Seu IP de Host: " + host_ip
 	else:
 		print("AVISO: Nó 'HostIPLabel' não encontrado em main.tscn. Não é possível exibir o IP.")
 
+func _on_deck_selected(index):
+	if index > 0:
+		p1_deck_choice = p1_deck_select.get_item_text(index)
+		print("Deck local selecionado: ", p1_deck_choice)
+		host_button.disabled = false
+		join_button.disabled = false
+	else:
+		p1_deck_choice = ""
+		host_button.disabled = true
+		join_button.disabled = true
+
 func _on_host_button_pressed():
+	if p1_deck_choice == "":
+		print("ERRO: Tentativa de Host sem deck selecionado.")
+		return
 	print("Iniciando como Host (Servidor)...")
 	host_ip_label.visible = true
 	_display_host_ip()
-	
 	var peer = ENetMultiplayerPeer.new()
 	var error = peer.create_server(DEFAULT_PORT)
-	
 	if error:
 		print("Falha ao criar o servidor: ", error)
 		return
-		
 	multiplayer.multiplayer_peer = peer
 	print("Servidor criado. Aguardando jogador...")
-	
 	hide_lobby_ui()
 
-# Chamado quando o jogador clica em "Join"
 func _on_join_button_pressed():
+	if p1_deck_choice == "":
+		print("ERRO: Tentativa de Join sem deck selecionado.")
+		return
 	print("Tentando se conectar como Cliente...")
 	var host_ip = ip_address_line_edit.text
-	
 	if host_ip == "":
 		host_ip = "127.0.0.1" # Padrão para localhost se vazio
-
 	var peer = ENetMultiplayerPeer.new()
 	var error = peer.create_client(host_ip, DEFAULT_PORT)
-	
 	if error:
 		print("Falha ao iniciar o cliente: ", error)
 		return
-
 	multiplayer.multiplayer_peer = peer
 	print("Tentando conectar ao Host em ", host_ip)
-	
 	hide_lobby_ui()
 
-# --- INÍCIO DE NOVAS FUNÇÕES DE SINAL ---
-
-# Chamado no HOST quando um Cliente se conecta
 func _on_peer_connected(peer_id):
 	print("Peer (Cliente) conectado! ID: ", peer_id)
-	# O Host só inicia o jogo quando o primeiro cliente (peer_id != 1) se conecta.
-	# Verificamos se o nó "1" já existe para não chamar start_game duas vezes
 	opponent_peer_id = peer_id
+	print("Host: Aguardando escolha de deck do cliente...")
+	
+func _on_connected_to_server():
+	print("Cliente: Conexão bem sucedida!")
+	print("Cliente: Enviando escolha de deck '", p1_deck_choice, "' para o Host.")
+	rpc_id(1, "rpc_receive_client_deck_choice", p1_deck_choice)
+	if not multiplayer.is_server() and not get_node_or_null("2"):
+		print("Cliente: Iniciando o jogo (Jogador 2).")
+		opponent_peer_id = 1
+		start_game(2, opponent_peer_id)
+
+func _on_connection_failed():
+	print("Cliente: Falha ao conectar.")
+	multiplayer.multiplayer_peer = null
+	show_lobby_ui()
+
+func _on_peer_disconnected(peer_id):
+	GameManager.goto_main_menu()
+	print("Peer desconectado: ", peer_id)
+
+@rpc("any_peer")
+func rpc_receive_client_deck_choice(deck_name: String):
+	if not multiplayer.is_server():
+		return
+	print("Host: Recebida a escolha de deck do cliente: ", deck_name)
+	opponent_deck_choice = deck_name
 	if multiplayer.is_server() and not get_node_or_null("1"):
 		print("Host: Iniciando o jogo (Jogador 1).")
 		start_game(1, opponent_peer_id)
 
-# Chamado no CLIENTE quando a conexão é bem sucedida
-# NOME DA FUNÇÃO CORRIGIDO:
-func _on_connected_to_server():
-	print("Cliente: Conexão bem sucedida!")
-	
-	# --- ALTERAÇÃO AQUI ---
-	if not multiplayer.is_server() and not get_node_or_null("2"):
-		print("Cliente: Iniciando o jogo (Jogador 2).")
-		opponent_peer_id = 1 # O oponente do Cliente é o Host (ID 1)
-		start_game(2, opponent_peer_id) # Passa o ID do oponente (Host)
-	# --- FIM DA ALTERAÇÃO ---
-
-# Chamado no CLIENTE quando a conexão falha
-func _on_connection_failed():
-	print("Cliente: Falha ao conectar.")
-	multiplayer.multiplayer_peer = null # Limpa o peer
-	
-	# Mostra a UI do Lobby novamente
-	show_lobby_ui()
-
-# Chamado em AMBOS quando alguém se desconecta
-func _on_peer_disconnected(peer_id):
-	print("Peer desconectado: ", peer_id)
-	# (Aqui você pode adicionar lógica para encerrar o jogo, voltar ao menu, etc.)
-	
-# --- FIM DE NOVAS FUNÇÕES DE SINAL ---
-
-# --- NOVAS Funções de UI ---
 func hide_lobby_ui():
 	ip_address_line_edit.visible = false
 	host_button.visible = false
 	join_button.visible = false
+	p1_deck_select.visible = false
+	deck_text.visible = false
+	
 
 func show_lobby_ui():
 	ip_address_line_edit.visible = true
 	host_button.visible = true
 	join_button.visible = true
-# --- FIM DA NOVA SEÇÃO ---
+	p1_deck_select.visible = true
+	host_button.disabled = true
+	join_button.disabled = true
+	if is_instance_valid(p1_deck_select):
+		p1_deck_select.select(0)
+	p1_deck_choice = ""
+	opponent_deck_choice = ""
 
 func start_game(player_id, opponent_id_arg):
 	host_ip_label.visible = false
@@ -177,44 +190,40 @@ func start_game(player_id, opponent_id_arg):
 	opponent_mulligan_decision_made = false
 	local_player_kept_hand = false
 	opponent_kept_hand = false
-	var deck_1_list = deck_preset_loader.get_automatic_preset("Newton")
-	var deck_2_list = deck_preset_loader.get_automatic_preset("Newton")
 	if multiplayer.is_server(): #
-		print("Host: Sincronizando decks...") #
-		deck_1_list.shuffle() #
-		deck_2_list.shuffle() #
-
-		if opponent_peer_id == 0: #
-			print("ERRO: ID do oponente desconhecido!") #
-			return #
-
-		var bm_host = get_node("/root/Main/1/BattleManager") #
-		var bm_client = get_node("/root/Main/2/BattleManager") #
-
-		if not is_instance_valid(bm_host) or not is_instance_valid(bm_client): #
-			print("ERRO CRÍTICO: BattleManagers não encontrados! Abortando.") #
-			return #
-
-		# Sincroniza decks (sem alterações)
-		bm_host.rpc_id(1, "rpc_set_my_deck", deck_1_list) #
-		bm_host.rpc_id(1, "rpc_set_opponent_deck_size", deck_2_list.size()) #
-		bm_client.rpc_id(opponent_peer_id, "rpc_set_my_deck", deck_2_list) #
-		bm_client.rpc_id(opponent_peer_id, "rpc_set_opponent_deck_size", deck_1_list.size()) #
-
-		await get_tree().create_timer(0.5).timeout #
-
-		print("Host: Enviando RPCs para comprar mãos iniciais...") #
-
-		# Compra mãos iniciais
-		for i in range(Constants.STARTING_HAND_SIZE): #
-			bm_host.call_deferred("rpc_id", 1, "rpc_draw_my_card") #
-			bm_host.call_deferred("rpc_id", 1, "rpc_draw_opponent_card") #
-			bm_client.call_deferred("rpc_id", opponent_peer_id, "rpc_draw_my_card") #
-			bm_client.call_deferred("rpc_id", opponent_peer_id, "rpc_draw_opponent_card") #
-			await get_tree().create_timer(0.1).timeout #
-
-		# Mostra botões de Mulligan para ambos os jogadores via RPC
-		rpc("show_mulligan_buttons_rpc") # Chamando o RPC renomeado
+		if p1_deck_choice == "" or opponent_deck_choice == "":
+			printerr("ERRO CRÍTICO: O Host está iniciando o jogo sem as duas escolhas de deck!")
+			printerr("Host (P1): ", p1_deck_choice, " | Cliente (P2): ", opponent_deck_choice)
+			if p1_deck_choice == "": p1_deck_choice = "Newton"
+			if opponent_deck_choice == "": opponent_deck_choice = "Newton"
+		print("Host: Carregando Deck P1 (Host) como '", p1_deck_choice, "'")
+		var deck_1_list = deck_preset_loader.get_automatic_preset(p1_deck_choice)
+		print("Host: Carregando Deck P2 (Cliente) como '", opponent_deck_choice, "'")
+		var deck_2_list = deck_preset_loader.get_automatic_preset(opponent_deck_choice)
+		print("Host: Sincronizando decks...") 
+		deck_1_list.shuffle() 
+		deck_2_list.shuffle() 
+		if opponent_peer_id == 0: 
+			print("ERRO: ID do oponente desconhecido!") 
+			return 
+		var bm_host = get_node("/root/Main/1/BattleManager") 
+		var bm_client = get_node("/root/Main/2/BattleManager") 
+		if not is_instance_valid(bm_host) or not is_instance_valid(bm_client): 
+			print("ERRO CRÍTICO: BattleManagers não encontrados! Abortando.") 
+			return 
+		bm_host.rpc_id(1, "rpc_set_my_deck", deck_1_list) 
+		bm_host.rpc_id(1, "rpc_set_opponent_deck_size", deck_2_list.size()) 
+		bm_client.rpc_id(opponent_peer_id, "rpc_set_my_deck", deck_2_list) 
+		bm_client.rpc_id(opponent_peer_id, "rpc_set_opponent_deck_size", deck_1_list.size()) 
+		await get_tree().create_timer(0.5).timeout 
+		print("Host: Enviando RPCs para comprar mãos iniciais...") 
+		for i in range(Constants.STARTING_HAND_SIZE): 
+			bm_host.call_deferred("rpc_id", 1, "rpc_draw_my_card") 
+			bm_host.call_deferred("rpc_id", 1, "rpc_draw_opponent_card") 
+			bm_client.call_deferred("rpc_id", opponent_peer_id, "rpc_draw_my_card") 
+			bm_client.call_deferred("rpc_id", opponent_peer_id, "rpc_draw_opponent_card") 
+			await get_tree().create_timer(0.1).timeout 
+		rpc("show_mulligan_buttons_rpc")
 
 @rpc("any_peer", "call_local")
 func show_mulligan_buttons_rpc():
@@ -299,31 +308,31 @@ func _on_mulligan_button_pressed():
 	print(local_id, ": Chamando player_deck.rpc_perform_mulligan_draw()")
 	player_deck.rpc_perform_mulligan_draw(cards_to_return)
 	print(local_id, ": Resetando local_player_mulligan_decision_made para false após Mulligan.")
-	local_player_mulligan_decision_made = false # Permite nova decisão (Manter)
+	local_player_mulligan_decision_made = false 
 	mulligan_button.disabled = true
 	print(local_id, ": Enviando notificação de Mulligan para o oponente ", opponent_peer_id)
 	rpc_id(opponent_peer_id, "rpc_receive_opponent_mulligan_decision", false)
 	check_both_players_ready()
 
 @rpc("any_peer")
-func rpc_receive_opponent_mulligan_decision(kept_hand: bool): # Renomeado
+func rpc_receive_opponent_mulligan_decision(kept_hand: bool): 
 	var sender_id = multiplayer.get_remote_sender_id()
 	print(multiplayer.get_unique_id(), ": Recebido do oponente ", sender_id, ". Manteve: ", kept_hand)
-	opponent_mulligan_decision_made = true # Marca que oponente decidiu algo
-	opponent_kept_hand = kept_hand # Registra o quê
-	if not kept_hand: # Se o oponente fez Mulligan
+	opponent_mulligan_decision_made = true 
+	opponent_kept_hand = kept_hand 
+	if not kept_hand: 
 		print(multiplayer.get_unique_id(), ": Oponente fez Mulligan. Resetando opponent_mulligan_decision_made para false.")
-		opponent_mulligan_decision_made = false # Reseta para esperar a decisão dele sobre a nova mão
+		opponent_mulligan_decision_made = false 
 	check_both_players_ready()
 
 func check_both_players_ready():
 	print(multiplayer.get_unique_id(), ": Checando prontidão - Local: ", local_player_mulligan_decision_made, "(Manteve:", local_player_kept_hand, ") Oponente: ", opponent_mulligan_decision_made, "(Manteve:", opponent_kept_hand, ")")
 	if local_player_mulligan_decision_made and opponent_mulligan_decision_made and \
 	   local_player_kept_hand and opponent_kept_hand:
-		if not game_started: # Evita iniciar múltiplas vezes
+		if not game_started:
 			print("Ambos jogadores decidiram manter. Iniciando o jogo...")
-			game_started = true # Habilita o jogo!
-			rpc("hide_mulligan_buttons_rpc") # Esconde botões para todos
+			game_started = true
+			rpc("hide_mulligan_buttons_rpc")
 			if multiplayer.is_server():
 				var bm_host = get_node_or_null("/root/Main/1/BattleManager")
 				var bm_client = get_node_or_null("/root/Main/2/BattleManager")
