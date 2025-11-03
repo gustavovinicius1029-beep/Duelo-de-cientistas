@@ -1,8 +1,9 @@
-[gd_scene load_steps=5 format=3 uid="uid://drrpriok1n2aw"]
+[gd_scene load_steps=6 format=3 uid="uid://drrpriok1n2aw"]
 
 [ext_resource type="Script" uid="uid://crm8012tc0rpc" path="res://scripts/multiplayer.gd" id="1_o5qli"]
 [ext_resource type="Texture2D" uid="uid://clcouhcr1kf3c" path="res://assets/ui/icKnowledge.png" id="3_tbgi4"]
 [ext_resource type="PackedScene" uid="uid://beyf1yuvlljo6" path="res://scenes/ui/GraveyardViewer.tscn" id="4_jyhfs"]
+[ext_resource type="FontFile" uid="uid://bc3k84kgndjtd" path="res://assets/ui/Silver.ttf" id="4_tbgi4"]
 [ext_resource type="Texture2D" uid="uid://bey66f8deq36o" path="res://assets/ui/icResearch.png" id="4_tefeu"]
 
 [node name="Main" type="Node2D"]
@@ -73,8 +74,36 @@ horizontal_alignment = 1
 vertical_alignment = 1
 selection_enabled = true
 
+[node name="HostIPLabel2" type="RichTextLabel" parent="."]
+z_index = -5
+offset_left = 902.0
+offset_top = 750.0
+offset_right = 1018.0
+offset_bottom = 841.0
+focus_mode = 2
+theme_override_fonts/normal_font = ExtResource("4_tbgi4")
+theme_override_font_sizes/normal_font_size = 80
+bbcode_enabled = true
+text = "Deck"
+horizontal_alignment = 1
+vertical_alignment = 1
+selection_enabled = true
+
 [node name="GraveyardViewer" parent="." instance=ExtResource("4_jyhfs")]
+visible = false
 offset_left = 140.0
 offset_top = 400.0
 offset_right = 140.0
 offset_bottom = 400.0
+
+[node name="P1DeckOptionButton" type="OptionButton" parent="."]
+offset_left = 1025.0
+offset_top = 767.0
+offset_right = 1143.0
+offset_bottom = 806.0
+
+[node name="P2DeckOptionButton" type="OptionButton" parent="."]
+offset_left = 1025.0
+offset_top = 768.0
+offset_right = 1143.0
+offset_bottom = 807.0

@@ -95,6 +95,7 @@ func _draw_card_action(card_drawn_name: String):
 		new_card.ability_script = load(ability_script_path).new()
 	var card_image_path = card_data["art_path"]
 	new_card.set_card_image_texture(card_image_path)
+	new_card.keywords = card_data["keywords"]
 	new_card.card_data_ref = {
 	"name": card_data["nome"],
 	"attack": card_data["ataque"],
@@ -103,7 +104,8 @@ func _draw_card_action(card_drawn_name: String):
 	"description": card_data["desc"],
 	"type": card_data["tipo"],
 	"cost": card_data["custo_energy"],
-	"energy_gen": card_data["gera_energy"]
+	"energy_gen": card_data["gera_energy"],
+	"keywords": new_card.keywords
 	}
 
 	# Inicia animação e espera terminar antes de emitir o sinal

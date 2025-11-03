@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3 uid="uid://tbe00hjr5q63"]
+[gd_scene load_steps=15 format=3 uid="uid://tbe00hjr5q63"]
 
 [ext_resource type="Script" uid="uid://bfun1cur26iea" path="res://scripts/battle_manager.gd" id="1_8ekmn"]
 [ext_resource type="Script" uid="uid://7ikv67lbs1gk" path="res://scripts/CardManager.gd" id="2_tixef"]
@@ -8,9 +8,11 @@
 [ext_resource type="Script" uid="uid://fvjuii13avah" path="res://scripts/input_manager.gd" id="6_v1vsp"]
 [ext_resource type="PackedScene" uid="uid://dvuc35rh86bx5" path="res://scenes/card_slot.tscn" id="7_qbk65"]
 [ext_resource type="Script" uid="uid://c3fe3x00fn2qk" path="res://scripts/land_card_slot.gd" id="8_8fuj6"]
+[ext_resource type="FontFile" uid="uid://bc3k84kgndjtd" path="res://assets/ui/Silver.ttf" id="9_pfs4d"]
 [ext_resource type="Script" uid="uid://5xopoltkuhv4" path="res://scripts/Graveyard.gd" id="9_rpubd"]
 [ext_resource type="Texture2D" uid="uid://bkgfcwy0eesjm" path="res://assets/graveyardImage.png" id="10_rpubd"]
 [ext_resource type="Script" uid="uid://cntwrvt56vwxd" path="res://scripts/vfx/CombatLineDrawer.gd" id="10_xhjue"]
+[ext_resource type="Texture2D" uid="uid://bfeioim7ynbq5" path="res://assets/ArtCards/eisten.png" id="13_oexhy"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_buj2l"]
 size = Vector2(148, 208)
@@ -135,12 +137,19 @@ offset_bottom = 571.0
 text = "Finalizar turno"
 
 [node name="PlayerHealthLabel" type="RichTextLabel" parent="."]
-offset_left = 238.0
-offset_top = 703.0
-offset_right = 278.0
-offset_bottom = 743.0
+offset_left = 1528.0
+offset_top = 657.0
+offset_right = 1577.0
+offset_bottom = 702.5
 scale = Vector2(2, 2)
-text = "0"
+theme_override_fonts/normal_font = ExtResource("9_pfs4d")
+theme_override_fonts/bold_font = ExtResource("9_pfs4d")
+theme_override_font_sizes/normal_font_size = 40
+theme_override_font_sizes/bold_font_size = 40
+bbcode_enabled = true
+text = "20"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="PlayerEnergyLabel" type="RichTextLabel" parent="."]
 offset_left = 310.0
@@ -191,3 +200,7 @@ input_pickable = false
 [node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="Graveyard/Area2D"]
 visible = false
 polygon = PackedVector2Array(-23, 16, -35, 20, -36, 27, -43, 27, -43, 32, 43, 33, 43, 28, 37, 27, 35, 19, 22, 15, 22, -19, 10, -31, -12, -32, -22, -20)
+
+[node name="Eisten" type="Sprite2D" parent="."]
+position = Vector2(1653, 905)
+texture = ExtResource("13_oexhy")

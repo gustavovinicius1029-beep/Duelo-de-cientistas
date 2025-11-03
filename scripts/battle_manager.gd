@@ -1,7 +1,7 @@
 extends Node
 
 signal combat_phase_changed(new_phase: CombatPhase)
-
+var game_ended: bool = false
 var phase_button
 var battle_timer
 var opponent_deck
@@ -27,6 +27,8 @@ const SUMMON_VFX_SCENE = preload("res://scenes/vfx/summon_vfx.tscn")
 const DESTROY_VFX = preload("res://scenes/vfx/destroy_vfx.tscn")
 const NORMAL_ATTACK_VFX = preload("res://scenes/vfx/normal_attack_vfx.tscn")
 const HEAVY_ATTACK_VFX = preload("res://scenes/vfx/heavy_attack_vfx.tscn")
+const EXPLOSION_VFX_SCENE = preload("res://scenes/vfx/ExplosionVFX.tscn")
+const FIREWORKS_VFX_SCENE = preload("res://scenes/vfx/FireworksVFX.tscn")
 
 var card_database_ref = preload("res://scripts/card_database.gd")
 
@@ -561,14 +563,25 @@ func resolve_combat_damage(blocker_assignments_override: Dictionary = {}):
 		if not is_instance_valid(attacker): continue
 		processed_attackers.append(attacker) # Marcar como processado
 		var blockers = current_blockers[attacker]
-		if blockers.is_empty() or not is_instance_valid(blockers[0]): continue
 		var primary_blocker = blockers[0]
+		if blockers.is_empty() or not is_instance_valid(blockers[0]): continue
+		var excess_damage = 0
+		if attacker.has_method("has_keyword") and attacker.has_keyword("Atropelar"):
+			var lethal_damage = primary_blocker.current_health
+			excess_damage = max(0, attacker.attack - lethal_damage)
+			if excess_damage > 0:
+				print(get_parent().name, ": Dano 'Atropelar' de ", attacker.card_name, ": ", excess_damage)
 		var original_attacker_pos = attacker.global_position
 		var attack_target_pos = primary_blocker.global_position + Vector2(0, Constants.BATTLE_POS_OFFSET_Y if local_player_is_attacker else -Constants.BATTLE_POS_OFFSET_Y)
 		attacker.z_index = 5
 		await animate_card_to_position_and_scale(attacker, attack_target_pos, attacker.scale, 0.15)
 		print(get_parent().name, ": Combate: ", attacker.card_name, " vs ", primary_blocker.card_name)
 		var damage_results = _apply_creature_damage(attacker, primary_blocker) # Isso toca o VFX e atualiza health
+		if excess_damage > 0:
+			if local_player_is_attacker:
+				opponent_health = max(0, opponent_health - excess_damage)
+			else: # Se o jogador local é o defensor
+				player_health = max(0, player_health - excess_damage)
 		if damage_results["attacker_died"]: cards_to_destroy.append({"card": attacker, "owner": attacker_owner_string})
 		if damage_results["defender_died"]: cards_to_destroy.append({"card": primary_blocker, "owner": defender_owner_string})
 		for i in range(1, blockers.size()):
@@ -625,7 +638,49 @@ func resolve_combat_damage(blocker_assignments_override: Dictionary = {}):
 	player_is_attacking = false
 	enable_game_inputs() # Reabilita UI
 	await get_tree().create_timer(0.3).timeout
-	enter_end_combat_phase() # Avança para a próxima fase
+	if (game_ended or not get_parent().is_multiplayer_authority()):
+		# Apenas prossiga para a próxima fase se o jogo *ainda* não terminou
+		if not game_ended:
+			enter_end_combat_phase()
+		return # Encerra a função aqui
+
+	var player_won = false
+	var player_lost = false
+
+	if opponent_health <= 0:
+		player_won = true
+	elif player_health <= 0:
+		player_lost = true
+	
+	if player_won:
+		game_ended = true
+		print("VITÓRIA! Vida do oponente chegou a 0.")
+		
+		var opponent_bm = get_opponent_battle_manager()
+		var opponent_peer_id = get_opponent_peer_id()
+		if is_instance_valid(opponent_bm) and opponent_peer_id != 0:
+			# Manda o oponente tocar as animações de *derrota*
+			opponent_bm.rpc_id(opponent_peer_id, "rpc_play_end_game_vfx", false) 
+			
+		# Toca as animações de *vitória* localmente
+		rpc_play_end_game_vfx(true)
+		
+	elif player_lost:
+		game_ended = true
+		print("DERROTA! Sua vida chegou a 0.")
+		
+		var opponent_bm = get_opponent_battle_manager()
+		var opponent_peer_id = get_opponent_peer_id()
+		if is_instance_valid(opponent_bm) and opponent_peer_id != 0:
+			# Manda o oponente tocar as animações de *vitória*
+			opponent_bm.rpc_id(opponent_peer_id, "rpc_play_end_game_vfx", true)
+			
+		# Toca as animações de *derrota* localmente
+		rpc_play_end_game_vfx(false)
+	
+	else:
+		# Se ninguém perdeu, avança para a próxima fase
+		enter_end_combat_phase()
 	
 func handle_blocker_declaration_click(clicked_card: Node2D):
 
@@ -753,6 +808,7 @@ func rpc_opponent_played_card(card_name: String, card_type: String, slot_index: 
 		card_to_play.ability_script = load(ability_script_path).new()
 	var card_image_path = card_data["art_path"]
 	card_to_play.set_card_image_texture(card_image_path)
+	card_to_play.keywords = card_data["keywords"]
 	card_to_play.card_data_ref = {
 	"name": card_name,
 	"attack": card_to_play.attack,
@@ -761,7 +817,8 @@ func rpc_opponent_played_card(card_name: String, card_type: String, slot_index: 
 	"description": card_to_play.description,
 	"type": card_to_play.card_type,
 	"cost": card_to_play.energy_cost,
-	"energy_gen": card_to_play.energy_generation
+	"energy_gen": card_to_play.energy_generation,
+	"keywords": card_to_play.keywords
 	}
 
 	target_slot.card_in_slot = true
@@ -1070,15 +1127,33 @@ func handle_spell_target_selection(target_card: Node2D):
 		if is_instance_valid(confirm_action_button) and confirm_action_button.visible:
 			confirm_action_button.disabled = current_spell_target_count <= current_spell_min_targets
 
-# --- Funções de UI e Auxiliares ---
-
 func update_health_labels():
-	if is_instance_valid(player_health_label): player_health_label.text = str(player_health)
-	if is_instance_valid(opponent_health_label): opponent_health_label.text = str(opponent_health)
+	if is_instance_valid(player_health_label): 
+		player_health_label.text = "[b]" + str(player_health) + "[b]"
+	if is_instance_valid(opponent_health_label): 
+		opponent_health_label.text = "[b]" + str(opponent_health) + "[b]"
 
 func update_energy_labels():
 	if is_instance_valid(player_energy_label): player_energy_label.text = "E: " + str(player_current_energy) + "/" + str(player_lands_in_play)
 	if is_instance_valid(opponent_energy_label): opponent_energy_label.text = "E: " + str(opponent_current_energy) + "/" + str(opponent_lands_in_play)
+
+# Em scripts/battle_manager.gd
+# ADICIONE ESTA FUNÇÃO (substituindo a rpc_show_end_screen)
+
+@rpc("any_peer", "call_local")
+func rpc_play_end_game_vfx(i_won: bool):
+	game_ended = true # Garante que este cliente pare também
+	disable_game_inputs() # Desabilita toda a UI
+	if i_won:
+		print("Tocando VFX de Vitória")
+		await _play_vfx_on_slots(FIREWORKS_VFX_SCENE, player_creature_slots_ref)
+		await _play_vfx_on_slots(EXPLOSION_VFX_SCENE, opponent_creature_slots_ref)
+	else:
+		print("Tocando VFX de Derrota")
+		await _play_vfx_on_slots(EXPLOSION_VFX_SCENE, player_creature_slots_ref)
+		await _play_vfx_on_slots(FIREWORKS_VFX_SCENE, opponent_creature_slots_ref)
+	await get_tree().create_timer(1.0).timeout 
+	GameManager.show_end_screen(i_won)
 
 func disable_game_inputs():
 	if is_instance_valid(phase_button): 
@@ -1242,6 +1317,7 @@ func summon_token(card_name: String, card_owner: String):
 		new_card.ability_script = load(ability_script_path).new()
 	var card_image_path = card_data["art_path"]
 	new_card.set_card_image_texture(card_image_path)
+	new_card.keywords = card_data["keywords"]
 
 
 	new_card.card_data_ref = {
@@ -1252,7 +1328,9 @@ func summon_token(card_name: String, card_owner: String):
 	"description": new_card.description,
 	"type": new_card.card_type,
 	"cost": new_card.energy_cost,
-	"energy_gen": new_card.energy_generation
+	"energy_gen": new_card.energy_generation,
+	"keywords": new_card.keywords
+	
 	}
 
 	# Posiciona
@@ -1278,3 +1356,25 @@ func summon_token(card_name: String, card_owner: String):
 		var slot_shape = slot_area.get_node_or_null("CollisionShape2D")
 		if is_instance_valid(slot_shape): 
 			slot_shape.disabled = true
+			
+func _play_vfx_on_slots(vfx_scene, slot_array: Array):
+	if not is_instance_valid(vfx_scene): return
+	
+	# Adiciona o VFX ao CardManager para ficar na camada correta
+	var vfx_parent = card_manager_ref
+	if not is_instance_valid(vfx_parent):
+		vfx_parent = get_parent() # Fallback
+
+	for slot in slot_array:
+		if is_instance_valid(slot):
+			var rngX = RandomNumberGenerator.new()
+			var my_random_numberX = rngX.randf_range(-70.0, 70.0)
+			var rngY = RandomNumberGenerator.new()
+			var my_random_numberY = rngY.randf_range(-70.0, 70.0)
+			var vfx = vfx_scene.instantiate()
+			vfx.global_position = slot.global_position - Vector2(my_random_numberX, my_random_numberY)
+			vfx_parent.add_child(vfx)
+			var rngTime = RandomNumberGenerator.new()
+			var my_random_numberTime = rngTime.randf_range(0,0.15)
+			# Pequena pausa para um efeito cascata
+			await get_tree().create_timer(my_random_numberTime).timeout

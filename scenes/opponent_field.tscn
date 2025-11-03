@@ -1,10 +1,11 @@
-[gd_scene load_steps=9 format=3 uid="uid://d057x6lxl0ltn"]
+[gd_scene load_steps=10 format=3 uid="uid://d057x6lxl0ltn"]
 
 [ext_resource type="Script" uid="uid://bfun1cur26iea" path="res://scripts/battle_manager.gd" id="1_qprj8"]
 [ext_resource type="Script" uid="uid://cnvlvgjxb54ua" path="res://scripts/opponent_deck.gd" id="1_wj220"]
 [ext_resource type="Texture2D" uid="uid://cab0fe5vwt5yr" path="res://assets/CartaFundo2.png" id="2_s3t45"]
 [ext_resource type="PackedScene" uid="uid://drerm5jex1ovf" path="res://scenes/opponent_card_slot.tscn" id="3_6b2sf"]
 [ext_resource type="Script" uid="uid://hy8wrlqh3eee" path="res://scripts/opponent_hand.gd" id="4_ov86f"]
+[ext_resource type="FontFile" uid="uid://bc3k84kgndjtd" path="res://assets/ui/Silver.ttf" id="6_7dba5"]
 [ext_resource type="Script" uid="uid://5xopoltkuhv4" path="res://scripts/Graveyard.gd" id="6_myng3"]
 [ext_resource type="Texture2D" uid="uid://bkgfcwy0eesjm" path="res://assets/graveyardImage.png" id="6_qprj8"]
 
@@ -119,12 +120,20 @@ card_slot_type = "Terreno"
 script = ExtResource("4_ov86f")
 
 [node name="OpponentHealthLabel" type="RichTextLabel" parent="."]
-offset_left = 1600.0
-offset_top = 263.0
-offset_right = 1640.0
-offset_bottom = 303.0
+offset_left = 261.0
+offset_top = 272.0
+offset_right = 306.5
+offset_bottom = 317.5
 scale = Vector2(2, 2)
-text = "0"
+theme_override_fonts/normal_font = ExtResource("6_7dba5")
+theme_override_fonts/bold_font = ExtResource("6_7dba5")
+theme_override_font_sizes/normal_font_size = 40
+theme_override_font_sizes/bold_font_size = 40
+bbcode_enabled = true
+text = "20
+"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="OpponentEnergyLabel" type="RichTextLabel" parent="."]
 offset_left = 1645.0

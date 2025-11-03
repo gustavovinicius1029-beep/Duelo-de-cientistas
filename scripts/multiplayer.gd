@@ -7,10 +7,17 @@ extends Node2D
 @onready var host_ip_label = $HostIPLabel
 @onready var keep_hand_button = $KeepHandButton 
 @onready var mulligan_button = $MulliganButton 
+@onready var p1_deck_select: OptionButton = $P1DeckOptionButton
+@onready var p2_deck_select: OptionButton = $P2DeckOptionButton
 
 # As cenas que representam os "lados" do campo de batalha
 var player_field_scene = preload("res://scenes/player_field.tscn")
 var opponent_field_scene = preload("res://scenes/opponent_field.tscn")
+var deck_preset_loader = preload("res://scripts/deck_presets.gd").new()
+
+var p1_deck_choice: String = "Newton"
+var p2_deck_choice: String = "Newton"
+var opponent_peer_id: int = 0
 
 var local_player_mulligan_decision_made = false
 var opponent_mulligan_decision_made = false
@@ -18,26 +25,7 @@ var local_player_kept_hand = false
 var opponent_kept_hand = false
 var game_started: bool = false
 
-const DEFAULT_PORT = 9999
-var opponent_peer_id = 0
-
-
-var deck_1_list: Array[String] = [
-	
-	
-	"Rato da Peste","Membro da Royal Society","Guardião da Casa da Moeda",
-	"Disco de Newton", "Canhão de Newton","Rato da Peste",
-	"Membro da Royal Society","Guardião da Casa da Moeda","Disco de Newton", 
-	"Canhão de Newton",
-	"Trinity College","Trinity College","Trinity College","Trinity College","Trinity College",
-	"Trinity College","Woolsthorpe Manor","Woolsthorpe Manor","Woolsthorpe Manor","Woolsthorpe Manor","Woolsthorpe Manor","Woolsthorpe Manor","Início da Peste","Início da Peste","Início da Peste","Início da Peste","Início da Peste","Início da Peste","Surto da Peste","Surto da Peste","Surto da Peste","Surto da Peste","A Peste","A Peste","A Peste","A Peste",
-]
-
-var deck_2_list: Array[String] = [
-
-	"Canhão de Newton","Canhão de Newton","Canhão de Newton","Canhão de Newton","Canhão de Newton","Canhão de Newton","Canhão de Newton","Canhão de Newton",
-]
-
+const DEFAULT_PORT = 4910
 
 func _ready():
 	host_button.pressed.connect(_on_host_button_pressed)
@@ -173,28 +161,24 @@ func start_game(player_id, opponent_id_arg):
 	opponent_mulligan_decision_made = false
 	local_player_kept_hand = false
 	opponent_kept_hand = false
-	# Define nomes e autoridade (sem alterações)
 	if player_id == 1: #
 		player_field.name = "1" #
 		opponent_field.name = "2" #
 	else: #
 		player_field.name = "2" #
 		opponent_field.name = "1" #
-
 	add_child(player_field) #
 	add_child(opponent_field) #
 	player_field.set_multiplayer_authority(multiplayer.get_unique_id()) #
 	opponent_field.set_multiplayer_authority(opponent_id_arg) #
-
 	await get_tree().process_frame #
 	await get_tree().process_frame #
-
-	# Resetar estado do Mulligan
 	local_player_mulligan_decision_made = false
 	opponent_mulligan_decision_made = false
 	local_player_kept_hand = false
 	opponent_kept_hand = false
-
+	var deck_1_list = deck_preset_loader.get_automatic_preset("Newton")
+	var deck_2_list = deck_preset_loader.get_automatic_preset("Newton")
 	if multiplayer.is_server(): #
 		print("Host: Sincronizando decks...") #
 		deck_1_list.shuffle() #

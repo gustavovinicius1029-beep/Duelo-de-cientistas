@@ -1,0 +1,91 @@
+[gd_scene load_steps=4 format=3 uid="uid://cf1ey8dsmq8cp"]
+
+[ext_resource type="Script" uid="uid://x6ehj4cr66tk" path="res://scripts/ui/menu.gd" id="1_yqeox"]
+[ext_resource type="FontFile" uid="uid://bc3k84kgndjtd" path="res://assets/ui/Silver.ttf" id="2_con2f"]
+[ext_resource type="Texture2D" uid="uid://cti8l1hkobwg1" path="res://assets/Custom Border and Panels Menu All Part/Border All 7.png" id="2_vjb58"]
+
+[node name="Menu" type="Control"]
+layout_mode = 3
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -20.0
+offset_right = 20.0
+offset_bottom = 20.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_yqeox")
+
+[node name="RichTextLabel" type="RichTextLabel" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -394.5
+offset_top = -320.0
+offset_right = 394.5
+offset_bottom = -164.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_fonts/normal_font = ExtResource("2_con2f")
+theme_override_font_sizes/normal_font_size = 140
+bbcode_enabled = true
+text = "Duelo de Cientistas"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Menu" type="NinePatchRect" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -394.5
+offset_top = -106.5
+offset_right = 394.5
+offset_bottom = 106.5
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("2_vjb58")
+region_rect = Rect2(0, 448, 64, 64)
+patch_margin_left = 20
+patch_margin_top = 20
+patch_margin_right = 20
+patch_margin_bottom = 20
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Menu"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -379.5
+offset_top = -92.5
+offset_right = 379.5
+offset_bottom = 92.5
+grow_horizontal = 2
+grow_vertical = 2
+alignment = 1
+
+[node name="StartButton" type="Button" parent="Menu/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_fonts/font = ExtResource("2_con2f")
+theme_override_font_sizes/font_size = 70
+text = "Iniciar Jogo"
+
+[node name="QuitButton" type="Button" parent="Menu/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_fonts/font = ExtResource("2_con2f")
+theme_override_font_sizes/font_size = 70
+text = "Sair"

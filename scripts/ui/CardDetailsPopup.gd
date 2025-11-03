@@ -38,15 +38,25 @@ func show_popup(card_data: Dictionary):
 	health_sprite.visible = false
 	description_rich_text.visible = false
 	
-
-	for keyword in card_database_ref.KEYWORD_DESCRIPTIONS.keys():
-		print("recebi")
-		if card_data.get("keywords") != []:
-			var rule_text = card_database_ref.KEYWORD_DESCRIPTIONS[keyword]
-			var keyword_popup_instance = KEYWORD_POPUP_SCENE.instantiate()
-			keyword_container.add_child(keyword_popup_instance)
-			keyword_popup_instance.show_popup(keyword.capitalize(), rule_text)
-	
+	var card_keywords = card_data.get("keywords")
+	if card_keywords: 
+		print("recebi") # O print agora só acontece se a carta tiver keywords
+		
+		# Itera APENAS pelas keywords que esta carta possui
+		for keyword in card_keywords:
+			
+			# Busca a descrição da keyword específica no banco de dados
+			if card_database_ref.KEYWORD_DESCRIPTIONS.has(keyword):
+				var rule_text = card_database_ref.KEYWORD_DESCRIPTIONS[keyword]
+				
+				# Instancia e mostra o popup
+				var keyword_popup_instance = KEYWORD_POPUP_SCENE.instantiate()
+				keyword_container.add_child(keyword_popup_instance)
+				keyword_popup_instance.show_popup(keyword.capitalize(), rule_text)
+			else:
+				# Aviso caso a keyword da carta não exista no banco de dados
+				print("Erro: A keyword '", keyword, "' não foi encontrada em KEYWORD_DESCRIPTIONS.")
+			
 	if card_data.has("name"):
 		name_label.text = "[b]" + card_data.get("name", "N/A") + "[/b]"
 		name_label.visible = true

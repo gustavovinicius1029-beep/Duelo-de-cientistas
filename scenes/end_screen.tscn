@@ -1,0 +1,82 @@
+[gd_scene load_steps=4 format=3 uid="uid://dx0narps3jd8"]
+
+[ext_resource type="Script" uid="uid://bs04a25damta0" path="res://scripts/ui/end_screen.gd" id="1_jc7ji"]
+[ext_resource type="Texture2D" uid="uid://cti8l1hkobwg1" path="res://assets/Custom Border and Panels Menu All Part/Border All 7.png" id="2_87vmq"]
+[ext_resource type="FontFile" uid="uid://bc3k84kgndjtd" path="res://assets/ui/Silver.ttf" id="3_g44xs"]
+
+[node name="EndScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_jc7ji")
+
+[node name="Menu" type="NinePatchRect" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -394.5
+offset_right = 394.5
+offset_bottom = 213.0
+grow_horizontal = 2
+texture = ExtResource("2_87vmq")
+region_rect = Rect2(0, 448, 64, 64)
+patch_margin_left = 20
+patch_margin_top = 20
+patch_margin_right = 20
+patch_margin_bottom = 20
+axis_stretch_horizontal = 1
+axis_stretch_vertical = 1
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Menu"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -379.5
+offset_top = -92.5
+offset_right = 379.5
+offset_bottom = 92.5
+grow_horizontal = 2
+grow_vertical = 2
+alignment = 1
+
+[node name="MenuButton" type="Button" parent="Menu/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_fonts/font = ExtResource("3_g44xs")
+theme_override_font_sizes/font_size = 70
+text = "Voltar ao Menu"
+
+[node name="QuitButton" type="Button" parent="Menu/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_fonts/font = ExtResource("3_g44xs")
+theme_override_font_sizes/font_size = 70
+text = "Sair"
+
+[node name="ResultLabel" type="RichTextLabel" parent="."]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -394.5
+offset_top = -156.0
+offset_right = 394.5
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_fonts/normal_font = ExtResource("3_g44xs")
+theme_override_font_sizes/normal_font_size = 140
+bbcode_enabled = true
+text = "Vitoria"
+horizontal_alignment = 1
+vertical_alignment = 1

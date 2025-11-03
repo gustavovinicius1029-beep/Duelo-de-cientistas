@@ -135,5 +135,6 @@ const CARDS = {
 
 const KEYWORD_DESCRIPTIONS = {
 	"Atropelar": "Se esta criatura fosse causar dano de combate suficiente para destruir seu bloqueador, ela causa o resto de seu dano ao General Oponente.",
+	"pelar": "pela o alvo"
 	# Adicione mais keywords aqui
 }

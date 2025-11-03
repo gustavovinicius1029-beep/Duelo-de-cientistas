@@ -30,6 +30,7 @@ var plague_counters: int = 0 # NOVO: Marcadores de Peste
 var player_hand_ref
 var opponent_hand_ref
 var has_summoning_sickness: bool = false
+var keywords: Array = []
 
 func _ready() -> void:
 	await get_tree().process_frame
@@ -138,3 +139,6 @@ func set_has_summoning_sickness(value: bool):
 			sickness_indicator.stop()
 	if is_instance_valid(sickness_overlay):
 		sickness_overlay.visible = value
+
+func has_keyword(keyword_name: String) -> bool:
+	return keywords.has(keyword_name)

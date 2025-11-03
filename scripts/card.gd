@@ -34,6 +34,7 @@ var player_hand_ref
 var opponent_hand_ref
 var is_in_viewer_mode: bool = false
 var has_summoning_sickness: bool = false
+var keywords: Array = []
 
 func _ready() -> void:
 	await get_tree().process_frame
@@ -57,9 +58,7 @@ func _ready() -> void:
 		printerr(self.name + " Error in _ready(): PlayerHand node not found at " + my_field_path + "/PlayerHand")
 	if not is_instance_valid(opponent_hand_ref):
 		printerr(self.name + " Error in _ready(): OpponentHand node not found at " + opponent_field_path + "/OpponentHand")
-	
 
-# Função atualizada para mostrar/esconder labels
 func setup_card_display():
 	if card_type == "Terreno":
 		attribute1_label.visible = false
@@ -143,3 +142,6 @@ func set_has_summoning_sickness(value: bool):
 			sickness_indicator.stop()
 	if is_instance_valid(sickness_overlay):
 		sickness_overlay.visible = value
+
+func has_keyword(keyword_name: String) -> bool:
+	return keywords.has(keyword_name)
