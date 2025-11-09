@@ -82,10 +82,7 @@ func _draw_card_action(card_drawn_name: String):
 	# Configura os dados da carta
 	var card_data = card_database_ref.CARDS[card_drawn_name]
 	
-	# Usando as novas chaves do dicionário
-	new_card.attack = card_data["ataque"]
-	new_card.base_health = card_data["vida"]
-	new_card.current_health = card_data["vida"] # Vida atual começa igual à base
+	new_card.initialize_stats(card_data)
 	new_card.description = card_data["desc"]
 	new_card.card_type = card_data["tipo"]
 	new_card.energy_cost = card_data["custo_energy"]
@@ -98,9 +95,9 @@ func _draw_card_action(card_drawn_name: String):
 	new_card.keywords = card_data["keywords"]
 	new_card.card_data_ref = {
 	"name": card_data["nome"],
-	"attack": card_data["ataque"],
+	"base_attack": card_data["ataque"],
 	"base_health": card_data["vida"],
-	"current_health": card_data["vida"], # Inclui vida atual
+	"current_health": card_data["vida"],
 	"description": card_data["desc"],
 	"type": card_data["tipo"],
 	"cost": card_data["custo_energy"],

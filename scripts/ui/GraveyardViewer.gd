@@ -1,8 +1,9 @@
 extends Control
 
-@onready var title_label = $Panel/VBoxContainer/TitleLabel
-@onready var card_grid = $Panel/VBoxContainer/ScrollContainer/CardGrid
-@onready var close_button = $Panel/VBoxContainer/CloseButton
+@onready var title_label = $NinePatchRect/VBoxContainer/TitleLabel
+@onready var card_grid = $NinePatchRect/VBoxContainer/ScrollContainer/CardGrid
+@onready var close_button = $NinePatchRect/VBoxContainer/CloseButton
+
 @onready var close_area = $CloseArea
 
 const CARD_SCENE = preload("res://scenes/card.tscn")

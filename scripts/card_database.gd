@@ -10,25 +10,25 @@ const CARDS = {
 		"vida": 1,
 		"habilidade_path": null,
 		"art_path":"res://assets/ArtCards/Rato da peste.png",
-		"desc": "a",
+		"desc": "A peste tem varias facetas",
 		"keywords":[]
 	},
-	"Membro da Royal Society": {
+	"Royal Society": {
 		"id": "Newton2",
-		"nome": "Membro da Royal Society",
+		"nome": "Royal Society",
 		"tipo": "Criatura",
 		"custo_energy": 2,
 		"gera_energy": 0,
 		"ataque": 2,
 		"vida": 1,
-		"habilidade_path": null,
+		"habilidade_path": "res://scripts/abilities/membro_royal_society.gd",
 		"art_path":"res://assets/ArtCards/MembroSociety.png",
-		"desc": "a",
+		"desc": "As outras criaturas que você controla ganham +1/+0.",
 		"keywords":[]
 	},
-	"Guardião da Casa da Moeda": {
+	"Guardião da Moeda": {
 		"id": "Newton3",
-		"nome": "Guardião da Casa da Moeda",
+		"nome": "Guardião da Moeda",
 		"tipo": "Criatura",
 		"custo_energy": 3,
 		"gera_energy": 0,
@@ -36,7 +36,7 @@ const CARDS = {
 		"vida": 2,
 		"habilidade_path": null,
 		"art_path":"res://assets/ArtCards/Guardia Moeda.png",
-		"desc": "a",
+		"desc": "Tão implacável na perseguição de falsários quanto na busca pela verdade.",
 		"keywords":[]
 	},
 	"Disco de Newton": {
@@ -47,9 +47,9 @@ const CARDS = {
 		"gera_energy": 0,
 		"ataque": 3,
 		"vida": 2,
-		"habilidade_path": null,
+		"habilidade_path":"res://scripts/abilities/disco_de_newton.gd",
 		"art_path":"res://assets/ArtCards/DiscoGemini.png",
-		"desc": "a",
+		"desc": "Se bloqueado, causa 2 de dano a todas as  criaturas inimigas",
 		"keywords":[]
 	},
 	"Canhão de Newton": {
@@ -135,6 +135,6 @@ const CARDS = {
 
 const KEYWORD_DESCRIPTIONS = {
 	"Atropelar": "Se esta criatura fosse causar dano de combate suficiente para destruir seu bloqueador, ela causa o resto de seu dano ao General Oponente.",
-	"pelar": "pela o alvo"
+	"Letal": "pela o alvo"
 	# Adicione mais keywords aqui
 }

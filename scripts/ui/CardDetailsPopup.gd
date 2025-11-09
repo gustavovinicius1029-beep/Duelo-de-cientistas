@@ -75,8 +75,8 @@ func show_popup(card_data: Dictionary):
 		if card_data.has("cost"):
 			cost_label.text = str(card_data.get("cost", 0))
 			cost_label.visible = true
-		if card_data.has("attack"):
-			attack_label.text = str(card_data.get("attack", 0))
+		if card_data.has("current_attack") and card_data.has("base_attack"):
+			attack_label.text = str(card_data.get("current_attack", 0)) + "/" + str(card_data.get("base_attack", 0))
 			attack_label.visible = true
 		if card_data.has("current_health"):
 			health_label.text = str(card_data.get("current_health", 0)) + "/" + str(card_data.get("base_health", 0))

@@ -14,11 +14,11 @@ extends Node2D
 @onready var sickness_overlay = $SicknessOverlay
 
 const HOVER_POPUP_OFFSET = Vector2(80, -120)
+var ability_script = null
 var card_data_ref: Dictionary = {} # Para guardar todos os dados da carta
 var description: String = ""
 var card_type: String = ""
 var card_name: String = ""
-var attack: int = 0
 var attack_value: int = 0 # Usado pela IA
 var card_slot_card_is_in: Node2D = null
 var defeated: bool = false
@@ -31,6 +31,8 @@ var player_hand_ref
 var opponent_hand_ref
 var has_summoning_sickness: bool = false
 var keywords: Array = []
+var base_attack: int = 0
+var current_attack: int = 0
 
 func _ready() -> void:
 	await get_tree().process_frame
@@ -71,7 +73,7 @@ func setup_card_display():
 		cost_label.visible = false
 		energy_gen_label.visible = false
 		# Define os textos (eles são definidos no deck, mas garantimos aqui)
-		attribute1_label.text = str(attack)
+		attribute1_label.text = str(current_attack)
 		attribute2_label.text = str(current_health)
 	
 	else:
@@ -111,6 +113,7 @@ func hide_combat_indicators() -> void:
 func _on_hover_timer_timeout():
 	if details_popup:
 		card_data_ref["current_health"] = current_health
+		card_data_ref["current_attack"] = current_attack
 		details_popup.show_popup(card_data_ref)
 		details_popup.global_position = global_position + HOVER_POPUP_OFFSET * scale # Ajusta pelo scale da carta
 
@@ -118,6 +121,7 @@ func _on_hover_timer_timeout():
 func update_details_popup_if_visible():
 	if details_popup and details_popup.visible:
 		card_data_ref["current_health"] = current_health
+		card_data_ref["current_attack"] = current_attack
 		details_popup.show_popup(card_data_ref) # Reaplica os dados
 
 func update_health_from_counters():
@@ -142,3 +146,26 @@ func set_has_summoning_sickness(value: bool):
 
 func has_keyword(keyword_name: String) -> bool:
 	return keywords.has(keyword_name)
+
+func initialize_stats(data: Dictionary):
+	base_attack = data.get("ataque", 0)
+	base_health = data.get("vida", 0)
+	current_attack = base_attack
+	current_health = base_health
+	update_stats_display()
+	
+func reset_stats_to_base():
+	current_attack = base_attack
+	update_stats_display()
+
+func apply_stat_buff(attack_buff: int, health_buff: int):
+	current_attack = max(0, current_attack + attack_buff)
+	update_stats_display()
+
+func update_stats_display():
+	if card_type == "Criatura":
+		if is_instance_valid(attribute1_label):
+			attribute1_label.text = str(current_attack)
+		if is_instance_valid(attribute2_label):
+			attribute2_label.text = str(current_health)
+		update_details_popup_if_visible()

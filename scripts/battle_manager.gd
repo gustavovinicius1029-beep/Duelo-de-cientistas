@@ -185,6 +185,7 @@ func _on_card_played(card: Node2D):
 			opponent_bm.rpc_id(opponent_peer_id, "rpc_opponent_played_card", card.card_name, card_type, slot_index)
 		else:
 			printerr("ERRO (_on_card_played): Oponente BM ou Peer ID inválido.")
+	update_all_static_effects()
 
 func _on_spell_cast_initiated(spell_card: Node2D):
 	var spell_name = spell_card.card_name
@@ -347,7 +348,6 @@ func _on_confirm_action_button_pressed():
 
 				reset_targeting_state()
 			else:
-				print("falhou")
 				reset_targeting_state()
 
 @rpc("any_peer", "call_local")
@@ -443,7 +443,7 @@ func _apply_creature_damage(attacking_card: Node2D, defending_card: Node2D) -> D
 		return results
 		
 	var vfx_scene = null
-	if attacking_card.attack >= 5 and HEAVY_ATTACK_VFX: 
+	if attacking_card.current_attack >= 5 and HEAVY_ATTACK_VFX: 
 		vfx_scene = HEAVY_ATTACK_VFX
 	elif NORMAL_ATTACK_VFX: 
 		vfx_scene = NORMAL_ATTACK_VFX
@@ -459,8 +459,8 @@ func _apply_creature_damage(attacking_card: Node2D, defending_card: Node2D) -> D
 		animate_card_to_position_and_scale(attacking_card, attacking_card.card_slot_card_is_in.global_position, attacking_card.scale, 0.15)
 	attacking_card.z_index = -1
 	
-	defending_card.current_health = max(0, defending_card.current_health - attacking_card.attack)
-	attacking_card.current_health = max(0, attacking_card.current_health - defending_card.attack)
+	defending_card.current_health = max(0, defending_card.current_health - attacking_card.current_attack)
+	attacking_card.current_health = max(0, attacking_card.current_health - defending_card.current_attack)
 
 	if defending_card.has_node("Attribute2"):
 		defending_card.attribute2_label.text = str(defending_card.current_health)
@@ -480,7 +480,7 @@ func _apply_creature_damage(attacking_card: Node2D, defending_card: Node2D) -> D
 func _apply_direct_damage(attacking_card: Node2D) -> void:
 	if not is_instance_valid(attacking_card):
 		return
-	opponent_health = max(0, opponent_health - attacking_card.attack)
+	opponent_health = max(0, opponent_health - attacking_card.current_attack)
 	update_health_labels()
 
 func confirm_attackers():
@@ -540,6 +540,7 @@ func confirm_blockers():
 	resolve_combat_damage(local_blocker_assignments) # <<<<<<< PASSAR COMO ARGUMENTO
 
 # Aceita um argumento opcional; se não for passado (pelo atacante), usa a variável de instância
+# Aceita um argumento opcional; se não for passado (pelo atacante), usa a variável de instância
 func resolve_combat_damage(blocker_assignments_override: Dictionary = {}):
 	print(get_parent().name, ": Resolvendo Dano de Combate") # Adiciona ID para depuração
 	var current_blockers = {}
@@ -559,19 +560,58 @@ func resolve_combat_damage(blocker_assignments_override: Dictionary = {}):
 	var attacker_owner_string = "Jogador" if local_player_is_attacker else "Oponente"
 	var defender_owner_string = "Oponente" if local_player_is_attacker else "Jogador"
 	var processed_attackers: Array = []
+	
+	# --- INÍCIO DA MODIFICAÇÃO (Loop 1: Triggers "On Blocked") ---
+	var triggers_fired = false
 	for attacker in current_blockers:
 		if not is_instance_valid(attacker): continue
+		
+		var blockers = current_blockers[attacker]
+		# Checa se foi *realmente* bloqueado (lista não vazia e bloqueador válido)
+		if blockers.is_empty() or not is_instance_valid(blockers[0]):
+			continue 
+			
+		# Checa se o atacante tem a habilidade "on blocked"
+		if is_instance_valid(attacker.ability_script) and attacker.ability_script.has_method("trigger_on_blocked_effect"):
+			print("Disparando 'on_blocked' para: ", attacker.card_name)
+			# A função 'disable_game_inputs()' já foi chamada
+			await attacker.ability_script.trigger_on_blocked_effect(self, attacker, blockers, attacker_owner_string)
+			triggers_fired = true
+	if triggers_fired:
+		# A habilidade (ex: Disco) pode ter matado cartas, então damos um tempo
+		await get_tree().create_timer(0.5).timeout 
+	for attacker in current_blockers:
+		if not is_instance_valid(attacker): continue
+		if attacker.current_health <= 0:
+			if not processed_attackers.has(attacker):
+				processed_attackers.append(attacker)
+			continue
 		processed_attackers.append(attacker) # Marcar como processado
 		var blockers = current_blockers[attacker]
-		var primary_blocker = blockers[0]
-		if blockers.is_empty() or not is_instance_valid(blockers[0]): continue
+		var primary_blocker = null
+		if not blockers.is_empty():
+			for b in blockers:
+				if is_instance_valid(b) and b.current_health > 0:
+					primary_blocker = b
+					break
+		if not is_instance_valid(primary_blocker):
+			print(attacker.card_name, " não tem mais bloqueadores vivos para combater.")
+			var original_pos = attacker.global_position
+			if is_instance_valid(attacker.card_slot_card_is_in):
+				original_pos = attacker.card_slot_card_is_in.global_position
+			await animate_card_to_position_and_scale(attacker, original_pos, attacker.scale, 0.15)
+			if is_instance_valid(attacker): attacker.z_index = -1
+			await get_tree().create_timer(0.1).timeout
+			continue # Vai para o próximo atacante
 		var excess_damage = 0
 		if attacker.has_method("has_keyword") and attacker.has_keyword("Atropelar"):
 			var lethal_damage = primary_blocker.current_health
-			excess_damage = max(0, attacker.attack - lethal_damage)
+			excess_damage = max(0, attacker.current_attack - lethal_damage)
 			if excess_damage > 0:
 				print(get_parent().name, ": Dano 'Atropelar' de ", attacker.card_name, ": ", excess_damage)
 		var original_attacker_pos = attacker.global_position
+		if is_instance_valid(attacker.card_slot_card_is_in):
+			original_attacker_pos = attacker.card_slot_card_is_in.global_position
 		var attack_target_pos = primary_blocker.global_position + Vector2(0, Constants.BATTLE_POS_OFFSET_Y if local_player_is_attacker else -Constants.BATTLE_POS_OFFSET_Y)
 		attacker.z_index = 5
 		await animate_card_to_position_and_scale(attacker, attack_target_pos, attacker.scale, 0.15)
@@ -582,13 +622,28 @@ func resolve_combat_damage(blocker_assignments_override: Dictionary = {}):
 				opponent_health = max(0, opponent_health - excess_damage)
 			else: # Se o jogador local é o defensor
 				player_health = max(0, player_health - excess_damage)
-		if damage_results["attacker_died"]: cards_to_destroy.append({"card": attacker, "owner": attacker_owner_string})
-		if damage_results["defender_died"]: cards_to_destroy.append({"card": primary_blocker, "owner": defender_owner_string})
-		for i in range(1, blockers.size()):
+		if damage_results["attacker_died"]:
+			if not cards_to_destroy.any(func(d): return d.card == attacker):
+				cards_to_destroy.append({"card": attacker, "owner": attacker_owner_string})
+		if damage_results["defender_died"]:
+			if not cards_to_destroy.any(func(d): return d.card == primary_blocker):
+				cards_to_destroy.append({"card": primary_blocker, "owner": defender_owner_string})
+		for i in range(blockers.size()):
 			var other_blocker = blockers[i]
-			if is_instance_valid(attacker) and attacker.current_health > 0 and is_instance_valid(other_blocker):
-				attacker.current_health = max(0, attacker.current_health - other_blocker.attack)
+			if other_blocker == primary_blocker: # Dano deste já foi trocado em _apply_creature_damage
+				continue 
+			if is_instance_valid(attacker) and attacker.current_health > 0 and is_instance_valid(other_blocker) and other_blocker.current_health > 0:
+				var vfx_scene = null
+				if other_blocker.current_attack >= 5 and HEAVY_ATTACK_VFX: vfx_scene = HEAVY_ATTACK_VFX
+				elif NORMAL_ATTACK_VFX: vfx_scene = NORMAL_ATTACK_VFX
+				if vfx_scene != null:
+					var vfx = vfx_scene.instantiate()
+					vfx.global_position = attacker.global_position
+					if is_instance_valid(card_manager): card_manager.add_child(vfx)
+					else: get_tree().root.add_child(vfx)
+				attacker.current_health = max(0, attacker.current_health - other_blocker.current_attack)
 				if attacker.has_node("Attribute2"): attacker.attribute2_label.text = str(attacker.current_health)
+				if attacker.has_method("update_details_popup_if_visible"): attacker.update_details_popup_if_visible()
 				if attacker.current_health <= 0 and not cards_to_destroy.any(func(d): return d.card == attacker):
 					cards_to_destroy.append({"card": attacker, "owner": attacker_owner_string})
 		await get_tree().create_timer(0.3).timeout # Pausa após hit
@@ -598,9 +653,13 @@ func resolve_combat_damage(blocker_assignments_override: Dictionary = {}):
 		await get_tree().create_timer(0.1).timeout
 	var all_attackers = declared_attackers.duplicate() # Pega a lista completa de quem iniciou o ataque
 	for attacker in all_attackers: # Itera sobre a lista original de atacantes
-		if processed_attackers.has(attacker) or not is_instance_valid(attacker): continue # Pula se já combateu ou inválido
+		if processed_attackers.has(attacker) or not is_instance_valid(attacker): continue # Pula se já combateu
+			
 		if attacker.current_health > 0: # Checa se o atacante ainda está vivo
 			var original_pos = attacker.global_position
+			if is_instance_valid(attacker.card_slot_card_is_in): # Garante que volte ao slot
+				original_pos = attacker.card_slot_card_is_in.global_position
+				
 			var target_y = opponent_health_label.global_position.y if local_player_is_attacker else player_health_label.global_position.y
 			var target_pos = Vector2(attacker.global_position.x, target_y)
 			attacker.z_index = 5
@@ -616,14 +675,14 @@ func resolve_combat_damage(blocker_assignments_override: Dictionary = {}):
 			if local_player_is_attacker:
 				_apply_direct_damage(attacker) # Função aplica a opponent_health
 			else: # Se o jogador local é o defensor, o atacante (remoto) causa dano a NÓS
-				player_health = max(0, player_health - attacker.attack)
+				player_health = max(0, player_health - attacker.current_attack)
 			if local_player_is_attacker and not player_cards_that_attacked_this_turn.has(attacker):
 				player_cards_that_attacked_this_turn.append(attacker)
 			await get_tree().create_timer(0.3).timeout # Pausa
 			await animate_card_to_position_and_scale(attacker, original_pos, attacker.scale, 0.15)
-			attacker.z_index = -1
+			if is_instance_valid(attacker): attacker.z_index = -1
 			await get_tree().create_timer(0.1).timeout
-	update_health_labels() # Atualiza ambas as vidas em ambos os clientes
+	update_health_labels()
 	clear_all_combat_indicators()
 	if is_instance_valid(combat_line_drawer_ref): combat_line_drawer_ref.clear_drawing()
 	if not cards_to_destroy.is_empty():
@@ -639,10 +698,9 @@ func resolve_combat_damage(blocker_assignments_override: Dictionary = {}):
 	enable_game_inputs() # Reabilita UI
 	await get_tree().create_timer(0.3).timeout
 	if (game_ended or not get_parent().is_multiplayer_authority()):
-		# Apenas prossiga para a próxima fase se o jogo *ainda* não terminou
 		if not game_ended:
 			enter_end_combat_phase()
-		return # Encerra a função aqui
+		return
 
 	var player_won = false
 	var player_lost = false
@@ -659,27 +717,19 @@ func resolve_combat_damage(blocker_assignments_override: Dictionary = {}):
 		var opponent_bm = get_opponent_battle_manager()
 		var opponent_peer_id = get_opponent_peer_id()
 		if is_instance_valid(opponent_bm) and opponent_peer_id != 0:
-			# Manda o oponente tocar as animações de *derrota*
-			opponent_bm.rpc_id(opponent_peer_id, "rpc_play_end_game_vfx", false) 
+			opponent_bm.rpc_id(opponent_peer_id, "rpc_play_end_game_vfx", false)
 			
-		# Toca as animações de *vitória* localmente
 		rpc_play_end_game_vfx(true)
 		
 	elif player_lost:
 		game_ended = true
 		print("DERROTA! Sua vida chegou a 0.")
-		
 		var opponent_bm = get_opponent_battle_manager()
 		var opponent_peer_id = get_opponent_peer_id()
 		if is_instance_valid(opponent_bm) and opponent_peer_id != 0:
-			# Manda o oponente tocar as animações de *vitória*
 			opponent_bm.rpc_id(opponent_peer_id, "rpc_play_end_game_vfx", true)
-			
-		# Toca as animações de *derrota* localmente
 		rpc_play_end_game_vfx(false)
-	
 	else:
-		# Se ninguém perdeu, avança para a próxima fase
 		enter_end_combat_phase()
 	
 func handle_blocker_declaration_click(clicked_card: Node2D):
@@ -795,10 +845,13 @@ func rpc_opponent_played_card(card_name: String, card_type: String, slot_index: 
 	card_to_play.card_name = card_name
 	
 	var card_data = card_database_ref.CARDS[card_name]
-	
-	card_to_play.attack = card_data["ataque"]
-	card_to_play.base_health = card_data["vida"]
-	card_to_play.current_health = card_data["vida"] # Vida atual começa igual à base
+	if card_to_play.has_method("initialize_stats"): # Boa prática checar
+		card_to_play.initialize_stats(card_data)
+	else:
+		card_to_play.base_attack = card_data.get("ataque", 0)
+		card_to_play.current_attack = card_to_play.base_attack
+		card_to_play.base_health = card_data.get("vida", 0)
+		card_to_play.current_health = card_to_play.base_health
 	card_to_play.description = card_data["desc"]
 	card_to_play.card_type = card_data["tipo"]
 	card_to_play.energy_cost = card_data["custo_energy"]
@@ -811,9 +864,9 @@ func rpc_opponent_played_card(card_name: String, card_type: String, slot_index: 
 	card_to_play.keywords = card_data["keywords"]
 	card_to_play.card_data_ref = {
 	"name": card_name,
-	"attack": card_to_play.attack,
-	"base_health": card_to_play.base_health,
-	"current_health": card_to_play.current_health, # Inclui vida atual
+	"base_attack": card_data["ataque"], 
+	"base_health": card_data["vida"],
+	"current_health": card_to_play.current_health, 
 	"description": card_to_play.description,
 	"type": card_to_play.card_type,
 	"cost": card_to_play.energy_cost,
@@ -839,6 +892,7 @@ func rpc_opponent_played_card(card_name: String, card_type: String, slot_index: 
 	card_to_play.setup_card_display()
 	if card_to_play.card_type == "Criatura":
 		card_to_play.set_has_summoning_sickness(true)
+	update_all_static_effects()
 
 @rpc("any_peer")
 func rpc_receive_attack(attacker_slot_index: int, defender_slot_index: int):
@@ -1009,12 +1063,12 @@ func destroy_card(card_to_destroy: Node2D, card_owner: String):
 		card_to_destroy.card_slot_card_is_in = null
 
 	if card_to_destroy.has_method("set_defeated"): card_to_destroy.set_defeated(true)
-
+	update_all_static_effects()
 	# Anima para o descarte e remove
 	await animate_card_to_position_and_scale(card_to_destroy, graveyard_pos, Constants.CARD_DESTROY_SCALE, 0.2)
 	graveyard_node.rpc_add_card(card_to_destroy.card_name)
 	card_to_destroy.queue_free() # Remove a carta da cena
-
+	
 # --- Funções de Ataque (para efeitos ou IA, NÃO para combate normal) ---
 
 func direct_attack(attacking_card: Node2D, attacker: String):
@@ -1026,8 +1080,8 @@ func direct_attack(attacking_card: Node2D, attacker: String):
 	var target_pos = Vector2(attacking_card.global_position.x, target_y)
 	await animate_card_to_position_and_scale(attacking_card, target_pos, attacking_card.scale, 0.15)
 
-	if attacker == "Oponente": player_health = max(0, player_health - attacking_card.attack)
-	else: opponent_health = max(0, opponent_health - attacking_card.attack)
+	if attacker == "Oponente": player_health = max(0, player_health - attacking_card.current_attack)
+	else: opponent_health = max(0, opponent_health - attacking_card.current_attack)
 	update_health_labels()
 
 	await get_tree().create_timer(0.5).timeout
@@ -1044,7 +1098,7 @@ func attack(attacking_card: Node2D, defending_card: Node2D, attacker: String):
 	var target_pos = defending_card.global_position + Vector2(0, Constants.BATTLE_POS_OFFSET_Y)
 	await animate_card_to_position_and_scale(attacking_card, target_pos, attacking_card.scale, 0.15)
 
-	var vfx_scene = NORMAL_ATTACK_VFX if attacking_card.attack < 5 else HEAVY_ATTACK_VFX
+	var vfx_scene = NORMAL_ATTACK_VFX if attacking_card.current_attack < 5 else HEAVY_ATTACK_VFX
 	if vfx_scene != null:
 		var vfx = vfx_scene.instantiate()
 		vfx.global_position = defending_card.global_position
@@ -1305,9 +1359,13 @@ func summon_token(card_name: String, card_owner: String):
 	else: get_tree().root.add_child(new_card); printerr("ERRO summon_token: CardManager inválido.") # Fallback
 
 	var card_data = card_database_ref.CARDS[card_name]
-	new_card.attack = card_data["ataque"]
-	new_card.base_health = card_data["vida"]
-	new_card.current_health = card_data["vida"] # Vida atual começa igual à base
+	if new_card.has_method("initialize_stats"): # Boa prática checar
+		new_card.initialize_stats(card_data)
+	else:
+		new_card.base_attack = card_data.get("ataque", 0)
+		new_card.current_attack = new_card.base_attack
+		new_card.base_health = card_data.get("vida", 0)
+		new_card.current_health = new_card.base_health
 	new_card.description = card_data["desc"]
 	new_card.card_type = card_data["tipo"]
 	new_card.energy_cost = card_data["custo_energy"]
@@ -1322,8 +1380,8 @@ func summon_token(card_name: String, card_owner: String):
 
 	new_card.card_data_ref = {
 	"name": card_name,
-	"attack": new_card.attack,
-	"base_health": new_card.base_health,
+	"base_attack": card_data["ataque"],
+	"base_health": card_data["vida"],
 	"current_health": new_card.current_health,
 	"description": new_card.description,
 	"type": new_card.card_type,
@@ -1356,6 +1414,7 @@ func summon_token(card_name: String, card_owner: String):
 		var slot_shape = slot_area.get_node_or_null("CollisionShape2D")
 		if is_instance_valid(slot_shape): 
 			slot_shape.disabled = true
+	update_all_static_effects()
 			
 func _play_vfx_on_slots(vfx_scene, slot_array: Array):
 	if not is_instance_valid(vfx_scene): return
@@ -1376,5 +1435,20 @@ func _play_vfx_on_slots(vfx_scene, slot_array: Array):
 			vfx_parent.add_child(vfx)
 			var rngTime = RandomNumberGenerator.new()
 			var my_random_numberTime = rngTime.randf_range(0,0.15)
-			# Pequena pausa para um efeito cascata
 			await get_tree().create_timer(my_random_numberTime).timeout
+
+func update_all_static_effects():
+	for card in player_cards_on_battlefield:
+		if is_instance_valid(card) and card.has_method("reset_stats_to_base"):
+			card.reset_stats_to_base()
+	for card in opponent_cards_on_battlefield:
+		if is_instance_valid(card) and card.has_method("reset_stats_to_base"):
+			card.reset_stats_to_base()
+	for card in player_cards_on_battlefield:
+		if is_instance_valid(card) and is_instance_valid(card.ability_script):
+			if card.ability_script.has_method("apply_aura_effect"):
+				card.ability_script.apply_aura_effect(self, card, player_cards_on_battlefield)
+	for card in opponent_cards_on_battlefield:
+		if is_instance_valid(card) and is_instance_valid(card.ability_script):
+			if card.ability_script.has_method("apply_aura_effect"):
+				card.ability_script.apply_aura_effect(self, card, opponent_cards_on_battlefield)
