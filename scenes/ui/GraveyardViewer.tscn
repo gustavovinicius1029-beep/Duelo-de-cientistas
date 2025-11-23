@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://beyf1yuvlljo6"]
+[gd_scene load_steps=3 format=3 uid="uid://beyf1yuvlljo6"]
 
 [ext_resource type="Script" uid="uid://s715gid6tnxx" path="res://scripts/ui/GraveyardViewer.gd" id="1_j5js7"]
+[ext_resource type="Texture2D" uid="uid://cti8l1hkobwg1" path="res://assets/Custom Border and Panels Menu All Part/Border All 7.png" id="2_6qoxe"]
 
 [node name="GraveyardViewer" type="Control"]
 layout_mode = 3
@@ -46,38 +47,41 @@ grow_horizontal = 2
 grow_vertical = 2
 flat = true
 
-[node name="Panel" type="PanelContainer" parent="."]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -95.0
-offset_top = -130.0
-offset_right = 95.0
-offset_bottom = 130.0
-grow_horizontal = 2
-grow_vertical = 2
+[node name="NinePatchRect" type="NinePatchRect" parent="."]
+layout_mode = 0
+offset_left = -94.0
+offset_top = -129.0
+offset_right = 94.0
+offset_bottom = 129.0
+texture = ExtResource("2_6qoxe")
+region_rect = Rect2(0, 448, 64, 64)
+patch_margin_left = 32
+patch_margin_top = 24
+patch_margin_right = 32
+patch_margin_bottom = 24
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Panel"]
-layout_mode = 2
+[node name="VBoxContainer" type="VBoxContainer" parent="NinePatchRect"]
+layout_mode = 0
+offset_left = -1.0
+offset_top = -1.0
+offset_right = 189.0
+offset_bottom = 259.0
 
-[node name="TitleLabel" type="Label" parent="Panel/VBoxContainer"]
+[node name="TitleLabel" type="Label" parent="NinePatchRect/VBoxContainer"]
 layout_mode = 2
 text = "Cemitério"
 horizontal_alignment = 1
 
-[node name="ScrollContainer" type="ScrollContainer" parent="Panel/VBoxContainer"]
+[node name="ScrollContainer" type="ScrollContainer" parent="NinePatchRect/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="CardGrid" type="GridContainer" parent="Panel/VBoxContainer/ScrollContainer"]
+[node name="CardGrid" type="GridContainer" parent="NinePatchRect/VBoxContainer/ScrollContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 columns = 2
 
-[node name="CloseButton" type="Button" parent="Panel/VBoxContainer"]
+[node name="CloseButton" type="Button" parent="NinePatchRect/VBoxContainer"]
 layout_mode = 2
 text = "Fechar"

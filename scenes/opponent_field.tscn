@@ -1,13 +1,15 @@
-[gd_scene load_steps=10 format=3 uid="uid://d057x6lxl0ltn"]
+[gd_scene load_steps=12 format=3 uid="uid://d057x6lxl0ltn"]
 
 [ext_resource type="Script" uid="uid://bfun1cur26iea" path="res://scripts/battle_manager.gd" id="1_qprj8"]
 [ext_resource type="Script" uid="uid://cnvlvgjxb54ua" path="res://scripts/opponent_deck.gd" id="1_wj220"]
 [ext_resource type="Texture2D" uid="uid://cab0fe5vwt5yr" path="res://assets/CartaFundo2.png" id="2_s3t45"]
 [ext_resource type="PackedScene" uid="uid://drerm5jex1ovf" path="res://scenes/opponent_card_slot.tscn" id="3_6b2sf"]
 [ext_resource type="Script" uid="uid://hy8wrlqh3eee" path="res://scripts/opponent_hand.gd" id="4_ov86f"]
-[ext_resource type="FontFile" uid="uid://bc3k84kgndjtd" path="res://assets/ui/Silver.ttf" id="6_7dba5"]
+[ext_resource type="FontFile" uid="uid://d2x7t0yehnjo4" path="res://assets/ui/PeaberryBase.ttf" id="6_7dba5"]
 [ext_resource type="Script" uid="uid://5xopoltkuhv4" path="res://scripts/Graveyard.gd" id="6_myng3"]
 [ext_resource type="Texture2D" uid="uid://bkgfcwy0eesjm" path="res://assets/graveyardImage.png" id="6_qprj8"]
+[ext_resource type="Texture2D" uid="uid://b8ytmkull7uy0" path="res://assets/ui/icCompassion.png" id="9_wx14n"]
+[ext_resource type="Texture2D" uid="uid://c4kj7m5j6sua0" path="res://assets/ui/icExplore.png" id="10_cdiv0"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_v32qa"]
 size = Vector2(143.33325, 206.66667)
@@ -122,13 +124,13 @@ script = ExtResource("4_ov86f")
 [node name="OpponentHealthLabel" type="RichTextLabel" parent="."]
 offset_left = 261.0
 offset_top = 272.0
-offset_right = 306.5
+offset_right = 308.5
 offset_bottom = 317.5
 scale = Vector2(2, 2)
 theme_override_fonts/normal_font = ExtResource("6_7dba5")
 theme_override_fonts/bold_font = ExtResource("6_7dba5")
-theme_override_font_sizes/normal_font_size = 40
-theme_override_font_sizes/bold_font_size = 40
+theme_override_font_sizes/normal_font_size = 30
+theme_override_font_sizes/bold_font_size = 30
 bbcode_enabled = true
 text = "20
 "
@@ -141,6 +143,10 @@ offset_top = 263.0
 offset_right = 1728.0
 offset_bottom = 303.0
 scale = Vector2(2, 2)
+theme_override_fonts/normal_font = ExtResource("6_7dba5")
+theme_override_fonts/bold_font = ExtResource("6_7dba5")
+theme_override_font_sizes/normal_font_size = 30
+theme_override_font_sizes/bold_font_size = 30
 text = "0"
 
 [node name="OpponentGraveyard" type="Node2D" parent="."]
@@ -170,3 +176,15 @@ input_pickable = false
 [node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="OpponentGraveyard/Area2D"]
 visible = false
 polygon = PackedVector2Array(-23, 16, -35, 20, -36, 27, -43, 27, -43, 32, 43, 33, 43, 28, 37, 27, 35, 19, 22, 15, 22, -19, 10, -31, -12, -32, -22, -20)
+
+[node name="HealthSprite" type="Sprite2D" parent="."]
+modulate = Color(0.20784314, 0.23921569, 0.6, 1)
+position = Vector2(373.00003, 311)
+scale = Vector2(0.1159995, 0.1159995)
+texture = ExtResource("9_wx14n")
+
+[node name="IcExplore" type="Sprite2D" parent="."]
+modulate = Color(0.2167702, 0.24833876, 0.62298524, 1)
+position = Vector2(1619, 288.00003)
+scale = Vector2(0.117999986, 0.117999986)
+texture = ExtResource("10_cdiv0")

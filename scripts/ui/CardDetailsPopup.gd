@@ -58,10 +58,10 @@ func show_popup(card_data: Dictionary):
 				print("Erro: A keyword '", keyword, "' não foi encontrada em KEYWORD_DESCRIPTIONS.")
 			
 	if card_data.has("name"):
-		name_label.text = "[b]" + card_data.get("name", "N/A") + "[/b]"
+		name_label.text = card_data.get("name", "N/A")
 		name_label.visible = true
 	var card_type = card_data.get("type", "")
-	type_label.text = "[b]" + card_type.capitalize() + "[/b]"
+	type_label.text = card_type.capitalize()
 	type_label.visible = true
 	if card_type == "Terreno":
 		if card_data.has("energy_gen"):

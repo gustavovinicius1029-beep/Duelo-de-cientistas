@@ -1188,8 +1188,8 @@ func update_health_labels():
 		opponent_health_label.text = "[b]" + str(opponent_health) + "[b]"
 
 func update_energy_labels():
-	if is_instance_valid(player_energy_label): player_energy_label.text = "E: " + str(player_current_energy) + "/" + str(player_lands_in_play)
-	if is_instance_valid(opponent_energy_label): opponent_energy_label.text = "E: " + str(opponent_current_energy) + "/" + str(opponent_lands_in_play)
+	if is_instance_valid(player_energy_label): player_energy_label.text = str(player_current_energy) + "/" + str(player_lands_in_play)
+	if is_instance_valid(opponent_energy_label): opponent_energy_label.text = str(opponent_current_energy) + "/" + str(opponent_lands_in_play)
 
 # Em scripts/battle_manager.gd
 # ADICIONE ESTA FUNÇÃO (substituindo a rpc_show_end_screen)
