@@ -11,13 +11,14 @@ config_version=5
 [application]
 
 config/name="DueloDeCientistas"
-run/main_scene="uid://drrpriok1n2aw"
+run/main_scene="uid://cf1ey8dsmq8cp"
 config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
 
 [autoload]
 
 Constants="*res://GlobalConstants.gd"
+GameManager="*res://scripts/GameManager.gd"
 
 [display]
 
